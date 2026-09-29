@@ -45,22 +45,22 @@ export const especialidad = pgTable("especialidad", {
 
 // ── Usuario (mejor-auth lo genera, solo extendemos) ─
 export const usuario = pgTable("usuario", {
-    id: uuid("id").primaryKey().defaultRandom(),
-    nombre: text("nombre").notNull(),
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
     email: text("email").notNull().unique(),
-    emailVerificado: boolean("email_verificado").default(false).notNull(),
+    emailVerified: boolean("email_verified").default(false).notNull(),
     telefono: text("telefono"),
-    telefonoVerificado: boolean("telefono_verificado").default(false).notNull(),
-    avatarUrl: text("avatar_url"),
+    telefonoVerificado: boolean("telefono_verificado").default(false),
+    image: text("image"),
     rol: rolEnum("rol").default("paciente").notNull(),
-    creadoEn: timestamp("creado_en").defaultNow().notNull(),
-    actualizadoEn: timestamp("actualizado_en").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
 // ── Doctor ─────────────────────────────────────────
 export const doctor = pgTable("doctor", {
     id: uuid("id").primaryKey().defaultRandom(),
-    usuarioId: uuid("usuario_id")
+    usuarioId: text("usuario_id")
         .notNull()
         .references(() => usuario.id, { onDelete: "cascade" }),
     especialidadId: uuid("especialidad_id")
@@ -142,7 +142,7 @@ export const cita = pgTable("cita", {
     doctorId: uuid("doctor_id")
         .notNull()
         .references(() => doctor.id),
-    pacienteId: uuid("paciente_id")
+    pacienteId: text("paciente_id")
         .references(() => usuario.id),
     ubicacionId: uuid("ubicacion_id")
         .references(() => ubicacion.id),
@@ -175,7 +175,7 @@ export const session = pgTable("session", {
     updatedAt: timestamp("updated_at").notNull(),
     ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
-    userId: uuid("user_id")
+    userId: text("user_id")
         .notNull()
         .references(() => usuario.id, { onDelete: "cascade" }),
 })
@@ -184,7 +184,7 @@ export const account = pgTable("account", {
     id: text("id").primaryKey(),
     accountId: text("account_id").notNull(),
     providerId: text("provider_id").notNull(),
-    userId: uuid("user_id")
+    userId: text("user_id")
         .notNull()
         .references(() => usuario.id, { onDelete: "cascade" }),
     accessToken: text("access_token"),
