@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db/client"
-import { cita, doctor, usuario } from "@/lib/db/schema"
+import { cita, doctor, usuario, especialidad } from "@/lib/db/schema"
 import { eq, and, gte, lte } from "drizzle-orm"
 import { getSession } from "@/lib/auth/session"
 import { randomBytes } from "crypto"
+import {enviarConfirmacionCita} from "@/lib/email/send";
 
 // GET /api/appointments — lista de citas del usuario
 export async function GET(request: NextRequest) {
@@ -58,8 +59,16 @@ export async function POST(request: NextRequest) {
 
         // Verificar que el doctor existe y está aprobado
         const [doctorData] = await db
-            .select()
+            .select({
+                id: doctor.id,
+                aprobado: doctor.aprobado,
+                usuarioId: doctor.usuarioId,
+                nombre: usuario.name,
+                especialidadNombre: especialidad.nombre,
+            })
             .from(doctor)
+            .innerJoin(usuario, eq(doctor.usuarioId, usuario.id))
+            .innerJoin(especialidad, eq(doctor.especialidadId, especialidad.id))
             .where(and(eq(doctor.id, doctorId), eq(doctor.aprobado, true)))
             .limit(1)
 
@@ -122,6 +131,22 @@ export async function POST(request: NextRequest) {
                 tokenGestion,
             })
             .returning()
+
+        // Enviar email de confirmación
+        try {
+            await enviarConfirmacionCita({
+                email: session?.user.email ?? invitadoEmail,
+                nombrePaciente: session?.user.name ?? invitadoNombre,
+                nombreDoctor: doctorData.nombre ?? "Doctor",
+                especialidad: "Odontología",
+                fechaInicio: new Date(fechaInicio),
+                fechaFin: new Date(fechaFin),
+                tokenGestion: nuevaCita.tokenGestion ?? undefined,
+            })
+        } catch (emailError) {
+            console.error("Error enviando email:", emailError)
+            // No fallamos la cita si el email falla
+        }
 
         return NextResponse.json(
             {
