@@ -5,6 +5,7 @@ import { eq, and, gte, lte } from "drizzle-orm"
 import { getSession } from "@/lib/auth/session"
 import { randomBytes } from "crypto"
 import {enviarConfirmacionCita} from "@/lib/email/send";
+import {programarRecordatorios} from "@/lib/queue/reminders";
 
 // GET /api/appointments — lista de citas del usuario
 export async function GET(request: NextRequest) {
@@ -146,6 +147,18 @@ export async function POST(request: NextRequest) {
         } catch (emailError) {
             console.error("Error enviando email:", emailError)
             // No fallamos la cita si el email falla
+        }
+
+        // Programar recordatorios
+        try {
+            await programarRecordatorios({
+                citaId: nuevaCita.id,
+                fechaInicio: new Date(fechaInicio),
+                emailPaciente: session?.user.email ?? invitadoEmail,
+            })
+        } catch (qstashError) {
+            console.error("Error programando recordatorios:", qstashError)
+            // No fallamos la cita si QStash falla
         }
 
         return NextResponse.json(
