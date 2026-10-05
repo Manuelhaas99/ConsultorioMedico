@@ -24,9 +24,17 @@ function aResultado<T>(parsed: z.ZodSafeParseResult<T>): Resultado<T> {
 
 /** Lee y valida el cuerpo JSON de la petición. Devuelve 400 si no es JSON o no cumple el esquema. */
 export async function leerCuerpo<S extends z.ZodType>(request: Request, schema: S): Promise<Resultado<z.output<S>>> {
+    return leerJson(await request.text(), schema)
+}
+
+/**
+ * Parsea y valida un cuerpo JSON ya leído como texto (p. ej. un webhook cuya
+ * firma se verificó sobre el cuerpo crudo). Devuelve 400 si no es JSON o no cumple el esquema.
+ */
+export function leerJson<S extends z.ZodType>(texto: string, schema: S): Resultado<z.output<S>> {
     let json: unknown
     try {
-        json = await request.json()
+        json = JSON.parse(texto)
     } catch {
         return { ok: false, response: errorJson(400, "El cuerpo debe ser JSON válido") }
     }

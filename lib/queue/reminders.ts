@@ -1,53 +1,26 @@
 import "server-only"
 import { env } from "@/lib/env"
+import { claveRecordatorio, recordatoriosPorProgramar } from "@/lib/recordatorios/reglas"
 import { getQstashClient } from "./client"
 
-export async function programarRecordatorios({
-                                                 citaId,
-                                                 fechaInicio,
-                                                 emailPaciente,
-                                             }: {
-    citaId: string
-    fechaInicio: Date
-    emailPaciente: string
-}) {
+/**
+ * Programa en QStash los recordatorios de 24 h y 1 h que aún queden en el futuro.
+ * El mensaje lleva el horario de la cita: si se reprograma o cancela, el handler
+ * lo detecta al entregarse y lo omite (no hace falta cancelar mensajes en QStash).
+ * Al reprogramar una cita basta con volver a llamar a esta función.
+ */
+export async function programarRecordatorios({ citaId, fechaInicio }: { citaId: string; fechaInicio: Date }) {
     const qstash = getQstashClient()
-    const baseUrl = env("app").BETTER_AUTH_URL
+    const url = new URL("/api/reminders", env("app").BETTER_AUTH_URL).toString()
 
-    console.log("QSTASH TOKEN:", process.env.QSTASH_TOKEN ? "existe" : "VACIO")
-    console.log("QSTASH URL:", process.env.QSTASH_URL)
-    console.log("BASE URL:", baseUrl)
-
-    // Recordatorio 24h antes
-    const fecha24h = new Date(fechaInicio.getTime() - 24 * 60 * 60 * 1000)
-    const ahora = new Date()
-
-    if (fecha24h > ahora) {
-        console.log("Programando recordatorio 24h para:", fecha24h.toISOString())
-        const result = await qstash.publishJSON({
-            url: `${baseUrl}/api/reminders`,
-            notBefore: Math.floor(fecha24h.getTime() / 1000),
-            body: {
-                citaId,
-                tipo: "24h",
-                emailPaciente,
-            },
-        })
-        console.log("Resultado 24h:", result)
-    }
-
-    // Recordatorio 1h antes
-    const fecha1h = new Date(fechaInicio.getTime() - 60 * 60 * 1000)
-
-    if (fecha1h > ahora) {
-        await qstash.publishJSON({
-            url: `${baseUrl}/api/reminders`,
-            notBefore: Math.floor(fecha1h.getTime() / 1000),
-            body: {
-                citaId,
-                tipo: "1h",
-                emailPaciente,
-            },
-        })
-    }
+    await Promise.all(
+        recordatoriosPorProgramar(citaId, fechaInicio).map(({ tipo, enviarEn, cuerpo }) =>
+            qstash.publishJSON({
+                url,
+                notBefore: Math.floor(enviarEn.getTime() / 1000),
+                deduplicationId: claveRecordatorio({ citaId, tipo, fechaInicio }),
+                body: cuerpo,
+            }),
+        ),
+    )
 }

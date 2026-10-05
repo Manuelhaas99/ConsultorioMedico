@@ -79,3 +79,10 @@ lib/
 - La página `/cita` (por construir) debe ser un Client Component que lea `location.hash`, borre el fragmento de la barra (`history.replaceState`) y llame a `/api/appointments/gestion` (`GET`, `PATCH`, `DELETE`) con `Authorization: Bearer <token>`. Nunca debe pasar el token en la query string.
 - Con el token se tiene el rol `paciente` de `lib/citas/politica.ts`: ver la cita, cancelarla y editar el motivo mientras sea futura y esté pendiente o confirmada.
 - Los recordatorios de invitados no incluyen enlace (no se conserva el token en claro); remiten al correo de confirmación.
+
+### Recordatorios (QStash)
+
+- Al crear una cita, `programarRecordatorios` (`lib/queue/reminders.ts`) publica un mensaje por recordatorio futuro (24 h y 1 h antes) con `{ citaId, tipo, fechaInicio }`. Nunca lleva el correo: el destinatario se lee de la base al enviar.
+- `POST /api/reminders` verifica la firma, valida el cuerpo con zod y llama a `procesarRecordatorio` (`lib/recordatorios/servicio.ts`), que omite citas inexistentes, inactivas o cuyo horario ya no coincide con `fechaInicio` (cancelar o reprogramar no requiere borrar mensajes en QStash).
+- Idempotencia: el recordatorio se marca como enviado con un `UPDATE ... WHERE recordatorio_X_enviado = false RETURNING` **antes** de enviar; si Resend falla se revierte y se responde 500 para que QStash reintente. La misma clave (`claveRecordatorio`) se usa como `deduplicationId` en QStash y como `idempotencyKey` en Resend.
+- Reprogramar una cita (cuando exista) debe volver a llamar a `programarRecordatorios` con la nueva fecha y poner en `false` las banderas `recordatorio_*_enviado`.
