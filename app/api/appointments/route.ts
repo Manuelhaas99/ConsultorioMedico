@@ -82,7 +82,6 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Verificar que el horario no choca con citas activas (ignora canceladas; [inicio, fin))
         const libre = await horarioLibre(doctorId, {
             inicio: new Date(fechaInicio),
             fin: new Date(fechaFin),
