@@ -8,7 +8,7 @@ import {
     type ParametrosSlots,
 } from "./slots"
 
-const fecha = "2026-10-12" // lunes
+const fecha = "2026-10-12"
 const zona = "America/Mexico_City"
 
 const generarSlots = (p: Omit<ParametrosSlots, "zona">) => generarSlotsEnZona({ zona, ...p })

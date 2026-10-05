@@ -67,10 +67,7 @@ describe("índices y restricciones", () => {
     })
 })
 
-/**
- * C6: todo instante se guarda como `timestamp with time zone`. Un `timestamp`
- * sin zona depende de la zona de quien escribe y lee (servidor, sesión de Postgres).
- */
+// Un `timestamp` sin zona depende de la zona de quien escribe y lee.
 describe("instantes con zona horaria", () => {
     const columnasTimestamp = tablas.flatMap((tabla) => {
         const { name, columns } = getTableConfig(tabla)
@@ -88,12 +85,8 @@ describe("instantes con zona horaria", () => {
     })
 })
 
-/**
- * 0003 cambia fecha_inicio/fecha_fin a timestamptz. Si se alteran en sentencias
- * separadas, el CHECK `fecha_fin > fecha_inicio` se evalúa entre timestamptz y
- * timestamp (convertido con el TimeZone de la sesión) y la migración falla en
- * sesiones al este de UTC. Ambas columnas deben cambiar en la misma sentencia.
- */
+// Por separado, el CHECK `fecha_fin > fecha_inicio` compararía timestamptz con
+// timestamp y la migración fallaría en sesiones al este de UTC.
 describe("migración 0003 a timestamptz", () => {
     const sentencias = readFileSync(
         fileURLToPath(new URL("./migrations/0003_zona_horaria_timestamptz.sql", import.meta.url)),
