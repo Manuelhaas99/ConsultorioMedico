@@ -27,10 +27,7 @@ describe("esquema de base de datos", () => {
     })
 })
 
-/**
- * Índices y CHECKs que sostienen consultas frecuentes e invariantes de datos (M1).
- * Si alguien los quita del esquema, `drizzle-kit generate` los borraría en silencio.
- */
+// Si alguno desaparece del esquema, `drizzle-kit generate` lo borraría de la base en silencio.
 describe("índices y restricciones", () => {
     const configDe = (nombre: string) => {
         const tabla = tablas.find((t) => getTableConfig(t).name === nombre)

@@ -185,11 +185,9 @@ export const cita = pgTable("cita", {
     creadoEn: timestamp("creado_en").defaultNow().notNull(),
     actualizadoEn: timestamp("actualizado_en").defaultNow().notNull(),
 }, (t) => [
-    // Agenda del doctor por rango de fechas (slots, verificación de traslape).
     index("cita_doctor_id_fecha_inicio_idx").on(t.doctorId, t.fechaInicio),
     index("cita_paciente_id_idx").on(t.pacienteId),
     check("cita_fechas_validas", sql`${t.fechaFin} > ${t.fechaInicio}`),
-    // Toda cita pertenece a un paciente con cuenta o a un invitado identificable.
     check(
         "cita_paciente_o_invitado",
         // coalesce: con NULL la comparación da NULL y el CHECK lo dejaría pasar.
