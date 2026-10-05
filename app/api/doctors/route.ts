@@ -1,41 +1,20 @@
 import {NextRequest, NextResponse} from "next/server";
-import {db} from "@/lib/db/client"
-import {doctor, usuario, especialidad, ubicacion} from "@/lib/db/schema"
-import {eq} from "drizzle-orm"
 import {getSession} from "@/lib/auth/session";
-import {registrarDoctorSchema} from "@/lib/doctores/schemas"
-import {registrarDoctor, type ErrorRegistrarDoctor} from "@/lib/doctores/servicio"
-import {errorJson, leerCuerpo} from "@/lib/http"
+import {listarDoctoresQuerySchema, registrarDoctorSchema} from "@/lib/doctores/schemas"
+import {listarDoctores, registrarDoctor, type ErrorRegistrarDoctor} from "@/lib/doctores/servicio"
+import {errorJson, leerCuerpo, leerQuery} from "@/lib/http"
 
+// GET /api/doctors?especialidad=<uuid>&ciudad=<texto> — directorio público de doctores aprobados
 export async function GET(request: NextRequest) {
+    const query = leerQuery(request, listarDoctoresQuerySchema)
+    if (!query.ok) return query.response
+
     try {
-        const {searchParams} = new URL(request.url)
-        const especialidadId = searchParams.get("especialidad")
-        const ciudad = searchParams.get("ciudad")
-
-        const doctores = await db
-            .select({
-                id: doctor.id,
-                bio: doctor.bio,
-                cedula: doctor.cedula,
-                especialidadId: doctor.especialidadId,
-                especialidadNombre: especialidad.nombre,
-                nombre: usuario.name,
-                email: usuario.email,
-                imagen: usuario.image,
-            })
-            .from(doctor)
-            .innerJoin(usuario, eq(doctor.usuarioId, usuario.id))
-            .innerJoin(especialidad, eq(doctor.especialidadId, especialidad.id))
-            .where(eq(doctor.aprobado, true))
-
+        const doctores = await listarDoctores(query.data)
         return NextResponse.json({doctores})
     } catch (error) {
         console.error(error)
-        return NextResponse.json(
-            {message: "Error al obtener doctores"},
-            {status: 500}
-        )
+        return errorJson(500, "Error al obtener doctores")
     }
 }
 

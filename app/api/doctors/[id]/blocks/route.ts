@@ -3,27 +3,26 @@ import { db } from "@/lib/db/client"
 import { bloqueoHorario, doctor } from "@/lib/db/schema"
 import { eq, and } from "drizzle-orm"
 import { getSession } from "@/lib/auth/session"
+import { doctorIdSchema } from "@/lib/doctores/schemas"
+import { obtenerBloqueos } from "@/lib/doctores/servicio"
+import { errorJson } from "@/lib/http"
 
-// GET /api/doctors/[id]/blocks — obtener bloqueos
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+// GET /api/doctors/[id]/blocks — el doctor y sus secretarios ven todos los bloqueos con motivo;
+// los demás, solo los intervalos vigentes sin motivo (404 si el doctor no está aprobado y no es tuyo)
+export async function GET(_request: NextRequest, ctx: RouteContext<"/api/doctors/[id]/blocks">) {
     try {
-        const { id } = await params
+        const id = doctorIdSchema.safeParse((await ctx.params).id)
+        if (!id.success) {
+            return errorJson(400, "Datos inválidos", { id: id.error.issues.map((i) => i.message) })
+        }
 
-        const bloqueos = await db
-            .select()
-            .from(bloqueoHorario)
-            .where(eq(bloqueoHorario.doctorId, id))
-
-        return NextResponse.json({ bloqueos })
+        const session = await getSession()
+        const resultado = await obtenerBloqueos(id.data, session ? { usuarioId: session.user.id } : null)
+        if (!resultado.ok) return errorJson(404, "Doctor no encontrado")
+        return NextResponse.json({ bloqueos: resultado.data })
     } catch (error) {
         console.error(error)
-        return NextResponse.json(
-            { message: "Error al obtener bloqueos" },
-            { status: 500 }
-        )
+        return errorJson(500, "Error al obtener bloqueos")
     }
 }
 
