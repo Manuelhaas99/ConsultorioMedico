@@ -82,7 +82,7 @@ CREATE TABLE "especialidad" (
 --> statement-breakpoint
 CREATE TABLE "secretario" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"usuario_id" uuid NOT NULL,
+	"usuario_id" text NOT NULL,
 	"doctor_id" uuid NOT NULL,
 	"creado_en" timestamp DEFAULT now() NOT NULL
 );
