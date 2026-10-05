@@ -73,7 +73,7 @@ describe("correos sin inyección de HTML", () => {
     })
 })
 
-describe("enlaces de gestión sin exponer el token (A2)", () => {
+describe("enlaces de gestión sin exponer el token", () => {
     const props = { ...base, baseUrl: "https://citas.example" }
 
     it("la confirmación del invitado lleva el token en el fragmento, no en la query", () => {

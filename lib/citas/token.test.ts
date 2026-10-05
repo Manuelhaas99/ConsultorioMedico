@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import { generarTokenGestion, hashTokenGestion, tokenGestionSchema } from "./token"
 
-describe("token de gestión (A2)", () => {
+describe("token de gestión", () => {
     it("genera tokens de 256 bits en base64url, distintos cada vez", () => {
         const a = generarTokenGestion()
         const b = generarTokenGestion()
