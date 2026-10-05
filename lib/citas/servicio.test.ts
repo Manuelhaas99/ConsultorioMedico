@@ -212,7 +212,7 @@ describe("crearCita", () => {
     })
 })
 
-describe("obtenerCita / actualizarCita / cancelarCita (C8)", () => {
+describe("obtenerCita / actualizarCita / cancelarCita", () => {
     const ahora = new Date("2026-10-10T12:00:00Z")
     const existente = {
         id: "c1",
