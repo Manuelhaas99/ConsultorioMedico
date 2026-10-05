@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { templateConfirmacionCita, templateRecordatorioCita } from "./templates"
+import { asuntoConfirmacion, asuntoRecordatorio, templateConfirmacionCita, templateRecordatorioCita } from "./templates"
 
 const base = {
     nombrePaciente: "Ana",
@@ -28,5 +28,48 @@ describe("correos de citas en la zona del consultorio (C6)", () => {
         const html = templateRecordatorioCita({ ...base, tiempoRestante: "1h", citaId: "c1" })
         expect(html).toContain("lunes, 12 de octubre de 2026")
         expect(html).toContain("<strong>Hora:</strong> 09:00")
+    })
+})
+
+describe("correos sin inyección de HTML (A1)", () => {
+    const malicioso = '<a href="https://evil.example">Haz clic</a>'
+    const props = {
+        ...base,
+        nombrePaciente: malicioso,
+        nombreDoctor: "Dr. <script>alert(1)</script>",
+        especialidad: "<img src=x onerror=alert(1)>",
+        direccion: '"><b>Calle</b>',
+        baseUrl: "https://citas.example",
+    }
+
+    it("la confirmación escapa todos los datos interpolados", () => {
+        const html = templateConfirmacionCita(props)
+        expect(html).not.toContain("<a href=\"https://evil.example\"")
+        expect(html).not.toContain("<script>")
+        expect(html).not.toContain("<img")
+        expect(html).not.toContain("<b>Calle</b>")
+        expect(html).toContain("&lt;a href=&quot;https://evil.example&quot;&gt;Haz clic&lt;/a&gt;")
+    })
+
+    it("el recordatorio escapa todos los datos interpolados", () => {
+        const html = templateRecordatorioCita({ ...props, tiempoRestante: "24h", citaId: "c1" })
+        expect(html).not.toContain("<script>")
+        expect(html).not.toContain("<img")
+        expect(html).toContain("&lt;a href=")
+    })
+
+    it("codifica el token en el enlace de gestión", () => {
+        const html = templateConfirmacionCita({ ...props, tokenGestion: 'abc"><x' })
+        expect(html).toContain('href="https://citas.example/cita?token=abc%22%3E%3Cx"')
+    })
+
+    it("omite el enlace si la URL base no es http(s)", () => {
+        const html = templateConfirmacionCita({ ...props, tokenGestion: "abc", baseUrl: "javascript:alert(1)" })
+        expect(html).not.toContain("<a ")
+    })
+
+    it("los asuntos son de una sola línea", () => {
+        expect(asuntoConfirmacion("Ana\r\nBcc: x@example.com")).toBe("Cita confirmada con Ana Bcc: x@example.com")
+        expect(asuntoRecordatorio("Ana\n", "1h")).toBe("Recordatorio: cita con Ana en 1 hora")
     })
 })

@@ -1,5 +1,5 @@
 import { resend } from "./client"
-import { templateConfirmacionCita, templateRecordatorioCita } from "./templates"
+import { asuntoConfirmacion, asuntoRecordatorio, templateConfirmacionCita, templateRecordatorioCita } from "./templates"
 
 const FROM = "Citas Médicas <onboarding@resend.dev>"
 
@@ -25,7 +25,7 @@ export async function enviarConfirmacionCita({
     return resend.emails.send({
         from: FROM,
         to: email,
-        subject: `Cita confirmada con ${nombreDoctor}`,
+        subject: asuntoConfirmacion(nombreDoctor),
         html: templateConfirmacionCita({
             nombrePaciente,
             nombreDoctor,
@@ -64,7 +64,7 @@ export async function enviarRecordatorioCita({
     return resend.emails.send({
         from: FROM,
         to: email,
-        subject: `Recordatorio: cita con ${nombreDoctor} en ${tiempoRestante === "24h" ? "24 horas" : "1 hora"}`,
+        subject: asuntoRecordatorio(nombreDoctor, tiempoRestante),
         html: templateRecordatorioCita({
             nombrePaciente,
             nombreDoctor,
