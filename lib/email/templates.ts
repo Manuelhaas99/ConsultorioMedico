@@ -4,7 +4,6 @@ import { construirUrl, html, textoDeUnaLinea } from "./html"
 
 export type EstadoConfirmacion = Extract<EstadoCita, "pendiente" | "confirmada">
 
-/** Una reserva queda `pendiente` hasta que el consultorio la confirma: no se le dice "confirmada". */
 export function textosConfirmacion(estado: EstadoConfirmacion): { titulo: string; mensaje: string } {
     return estado === "pendiente"
         ? {

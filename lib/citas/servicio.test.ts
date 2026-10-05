@@ -217,7 +217,6 @@ describe("crearCita", () => {
         vi.mocked(repositorio.franjasDelDia).mockResolvedValue([{ horaInicio: "09:00", horaFin: "11:00", ubicacionId }])
         const r = await crearCita({ ...entrada, ubicacionId, tipoConsultaId }, contexto)
         expect(r.ok).toBe(true)
-        // La especialidad y la ubicación reales viajan al correo de confirmación (M5).
         expect(r).toMatchObject({ doctor: { especialidad: "Ortodoncia" }, ubicacion: ubicacionConsultorio })
         expect(repositorio.ubicacionDelDoctor).toHaveBeenCalledWith(ubicacionId, doctorId)
         expect(repositorio.tipoConsultaDelDoctor).toHaveBeenCalledWith(tipoConsultaId, doctorId)

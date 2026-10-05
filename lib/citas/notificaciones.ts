@@ -3,10 +3,7 @@ import { enviarConfirmacionCita } from "@/lib/email/send"
 import { programarRecordatorios } from "@/lib/queue/reminders"
 import { datosConfirmacion, type CitaCreada } from "./confirmacion"
 
-/**
- * Avisa al paciente de una cita recién creada y programa sus recordatorios.
- * Un fallo de correo o de QStash no deshace la cita: se registra y se continúa.
- */
+/** Un fallo de correo o de QStash no deshace la cita: se registra y se continúa. */
 export async function notificarCitaCreada(creada: CitaCreada & { cita: { id: string } }): Promise<void> {
     const datos = datosConfirmacion(creada)
     if (!datos) return

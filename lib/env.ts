@@ -43,7 +43,7 @@ const esquemas = {
         RESEND_API_KEY: texto,
     }),
     correo: z.object({
-        /** Remitente con dominio verificado en Resend: `Nombre <citas@dominio>` o `citas@dominio`. */
+        /** Debe tener dominio verificado en Resend. */
         EMAIL_FROM: texto
             .regex(/^(?:[^<>@\r\n]+<[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+>|[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+)$/, {
                 message: 'debe ser "Nombre <correo@dominio>" o "correo@dominio"',

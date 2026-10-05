@@ -100,7 +100,7 @@ describe("enlaces de gestión sin exponer el token (A2)", () => {
     })
 })
 
-describe("textos consistentes con el estado de la cita (M5)", () => {
+describe("textos consistentes con el estado de la cita", () => {
     it("una cita pendiente no se anuncia como confirmada", () => {
         const html = templateConfirmacionCita(base)
         expect(html).toContain("Recibimos tu solicitud de cita")
@@ -109,7 +109,6 @@ describe("textos consistentes con el estado de la cita (M5)", () => {
     })
 
     it("no promete avisos que el sistema no envía", () => {
-        // No hay notificación al confirmar o cancelar: el correo no puede prometerla.
         expect(textosConfirmacion("pendiente").mensaje).not.toMatch(/avisaremos|te avisamos|notificaremos/i)
         expect(textosConfirmacion("pendiente").mensaje).toMatch(/pendiente/i)
     })

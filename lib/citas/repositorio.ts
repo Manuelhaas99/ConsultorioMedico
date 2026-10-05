@@ -21,7 +21,6 @@ export async function doctorReservable(doctorId: string): Promise<DoctorReservab
     return fila
 }
 
-/** Ubicación si pertenece al doctor, o `undefined` si no existe o es de otro doctor. */
 export async function ubicacionDelDoctor(ubicacionId: string, doctorId: string): Promise<UbicacionCita | undefined> {
     const [fila] = await db
         .select({ nombre: ubicacion.nombre, direccion: ubicacion.direccion, colonia: ubicacion.colonia, ciudad: ubicacion.ciudad })

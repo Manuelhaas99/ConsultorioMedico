@@ -16,7 +16,6 @@ export type DatosRecordatorio = EstadoRecordatorioCita & {
     nombrePaciente: string
     nombreDoctor: string
     especialidad: string
-    /** Dirección de la ubicación de la cita, si la reserva indica una. */
     direccion: string | null
     invitado: boolean
 }

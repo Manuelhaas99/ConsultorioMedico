@@ -82,7 +82,6 @@ export type ResultadoCrearCita =
           ok: true
           cita: CitaRegistrada
           doctor: { nombre: string; especialidad: string }
-          /** Ubicación elegida, o `null` si la reserva no indica una. */
           ubicacion: UbicacionCita | null
           contacto: Contacto
           /** Solo se conoce aquí: la base guarda su hash. `null` con sesión. */

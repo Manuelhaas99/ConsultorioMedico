@@ -20,7 +20,6 @@ export class EnvioCorreoError extends Error {
 
 type CorreoSaliente = { to: string; subject: string; html: string; idempotencyKey?: string }
 
-/** Envía con el remitente configurado (EMAIL_FROM) y lanza `EnvioCorreoError` si Resend lo rechaza. */
 async function enviar({ to, subject, html, idempotencyKey }: CorreoSaliente): Promise<{ id: string }> {
     const from = resolverRemitente(env("correo"))
     const { data, error } = await getResend().emails.send(
