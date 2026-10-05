@@ -4,7 +4,7 @@
 // en la zona del proceso). La corrección de zona horaria se hace por separado (C6).
 
 import type { diaSemanaEnum } from "@/lib/db/schema"
-import { ocupaHorario, seTraslapan, type EstadoCita, type Intervalo } from "./intervalos"
+import { chocaConCitas, seTraslapan, type EstadoCita, type Intervalo } from "./intervalos"
 
 export type DiaSemana = (typeof diaSemanaEnum.enumValues)[number]
 
@@ -82,7 +82,6 @@ export function generarSlots({ fecha, duracionMinutos, franjas, bloqueos, citas 
         throw new RangeError(`Duración de slot inválida: ${duracionMinutos}`)
     }
     const duracionMs = duracionMinutos * 60 * 1000
-    const ocupados: Intervalo[] = [...bloqueos, ...citas.filter((c) => ocupaHorario(c.estado))]
     const slots: Slot[] = []
 
     for (const franja of franjas) {
@@ -94,7 +93,7 @@ export function generarSlots({ fecha, duracionMinutos, franjas, bloqueos, citas 
             if (fin > limite) break
 
             const slot = { inicio, fin }
-            const ocupado = ocupados.some((o) => seTraslapan(slot, o))
+            const ocupado = bloqueos.some((b) => seTraslapan(slot, b)) || chocaConCitas(slot, citas)
             slots.push({ inicio: inicio.toISOString(), fin: fin.toISOString(), disponible: !ocupado })
 
             inicio = fin

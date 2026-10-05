@@ -25,3 +25,14 @@ export const ESTADOS_QUE_LIBERAN_HORARIO = ["cancelada"] as const satisfies read
 export function ocupaHorario(estado: EstadoCita): boolean {
     return !(ESTADOS_QUE_LIBERAN_HORARIO as readonly EstadoCita[]).includes(estado)
 }
+
+/**
+ * Indica si `intervalo` choca con alguna cita que ocupa horario.
+ * Ignora canceladas y usa intervalos semiabiertos: 09:00–09:30 y 09:30–10:00 no chocan.
+ */
+export function chocaConCitas(
+    intervalo: Intervalo,
+    citas: readonly (Intervalo & { estado: EstadoCita })[],
+): boolean {
+    return citas.some((c) => ocupaHorario(c.estado) && seTraslapan(intervalo, c))
+}

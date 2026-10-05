@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db/client"
 import { cita, doctor, usuario, especialidad } from "@/lib/db/schema"
-import { eq, and, gte, lte } from "drizzle-orm"
+import { eq, and } from "drizzle-orm"
 import { getSession } from "@/lib/auth/session"
 import { randomBytes } from "crypto"
 import {enviarConfirmacionCita} from "@/lib/email/send";
 import {programarRecordatorios} from "@/lib/queue/reminders";
+import { horarioLibre } from "@/lib/citas/servicio"
 
 // GET /api/appointments — lista de citas del usuario
 export async function GET(request: NextRequest) {
@@ -81,20 +82,13 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Verificar que el slot no está ocupado
-        const citaExistente = await db
-            .select()
-            .from(cita)
-            .where(
-                and(
-                    eq(cita.doctorId, doctorId),
-                    lte(cita.fechaInicio, new Date(fechaFin)),
-                    gte(cita.fechaFin, new Date(fechaInicio))
-                )
-            )
-            .limit(1)
+        // Verificar que el horario no choca con citas activas (ignora canceladas; [inicio, fin))
+        const libre = await horarioLibre(doctorId, {
+            inicio: new Date(fechaInicio),
+            fin: new Date(fechaFin),
+        })
 
-        if (citaExistente.length > 0) {
+        if (!libre) {
             return NextResponse.json(
                 { message: "El horario seleccionado ya está ocupado" },
                 { status: 409 }
