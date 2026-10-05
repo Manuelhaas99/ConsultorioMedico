@@ -15,7 +15,6 @@ describe("configuracionConexion", () => {
     it.each(["require", "verify-ca", "verify-full", "prefer"])("sslmode=%s se traduce a TLS verificado", (modo) => {
         const r = configuracionConexion({ DATABASE_URL: `${URL_BASE}?sslmode=${modo}&application_name=citas` })
         expect(r.ssl).toEqual({ rejectUnauthorized: true })
-        // sslmode se quita para que pg no pise la configuración; el resto de parámetros se conserva.
         expect(r.connectionString).toBe(`${URL_BASE}?application_name=citas`)
     })
 
