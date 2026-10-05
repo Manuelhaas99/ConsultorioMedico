@@ -1,9 +1,6 @@
 import { formatearIntervalo, ZONA_CONSULTORIO } from "@/lib/citas/zona-horaria"
 import { construirUrl, html, textoDeUnaLinea } from "./html"
 
-// Todo valor interpolado pasa por la plantilla etiquetada `html`, que lo escapa:
-// nombres, direcciones y demás datos los escribe el usuario (incluso un invitado sin cuenta).
-
 type ConfirmacionCitaProps = {
     nombrePaciente: string
     nombreDoctor: string
@@ -12,9 +9,8 @@ type ConfirmacionCitaProps = {
     fechaFin: Date
     direccion?: string
     tokenGestion?: string
-    /** Zona IANA del consultorio; el servidor corre en UTC, así que se formatea explícitamente. */
     zona?: string
-    /** URL pública de la app para los enlaces. Por defecto `BETTER_AUTH_URL`. */
+    /** Por defecto `BETTER_AUTH_URL`. */
     baseUrl?: string
 }
 
@@ -31,8 +27,6 @@ export function templateConfirmacionCita({
 }: ConfirmacionCitaProps): string {
     const { fecha, horaInicio, horaFin } = formatearIntervalo(fechaInicio, fechaFin, zona)
 
-    // El token va en el fragmento: no llega al servidor ni a Referer. La página /cita lo
-    // lee en el cliente y llama a /api/appointments/gestion con Authorization: Bearer.
     const linkGestion = tokenGestion ? construirUrl(baseUrl, "/cita", {}, { token: tokenGestion }) : null
 
     return html`
@@ -69,10 +63,7 @@ export function templateConfirmacionCita({
 type RecordatorioCitaProps = Omit<ConfirmacionCitaProps, "tokenGestion"> & {
     tiempoRestante: "24h" | "1h"
     citaId: string
-    /**
-     * La cita es de un invitado sin cuenta. Como la base solo guarda el hash de su
-     * token, el recordatorio no puede incluir el enlace de gestión.
-     */
+    /** Sin enlace de gestión: la base solo guarda el hash del token. */
     invitado: boolean
 }
 
@@ -120,12 +111,10 @@ export function templateRecordatorioCita({
   `.toString()
 }
 
-/** Asunto del correo de confirmación, en una sola línea. */
 export function asuntoConfirmacion(nombreDoctor: string): string {
     return textoDeUnaLinea(`Cita confirmada con ${nombreDoctor}`)
 }
 
-/** Asunto del recordatorio, en una sola línea. */
 export function asuntoRecordatorio(nombreDoctor: string, tiempoRestante: "24h" | "1h"): string {
     return textoDeUnaLinea(`Recordatorio: cita con ${nombreDoctor} en ${tiempoRestante === "24h" ? "24 horas" : "1 hora"}`)
 }

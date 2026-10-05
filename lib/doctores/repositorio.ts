@@ -28,7 +28,6 @@ export async function doctorPorCedula(cedula: string): Promise<{ id: string } | 
     return fila
 }
 
-/** Inserta la solicitud siempre como no aprobada; el rol del usuario no cambia. */
 export async function insertarDoctor(valores: NuevoDoctor): Promise<FilaDoctor> {
     const [fila] = await db
         .insert(doctor)
@@ -38,11 +37,7 @@ export async function insertarDoctor(valores: NuevoDoctor): Promise<FilaDoctor> 
     return fila
 }
 
-/**
- * Aprueba al doctor y ajusta el rol de su usuario en una sola transacción, con
- * la fila del usuario bloqueada para que un cambio de rol simultáneo no se pierda.
- * Devuelve `undefined` si el doctor no existe. Es idempotente.
- */
+/** La fila del usuario se bloquea para que un cambio de rol simultáneo no se pierda. Idempotente. */
 export async function aprobarDoctorYAsignarRol(doctorId: string): Promise<{ doctor: FilaDoctor; rol: Rol } | undefined> {
     return db.transaction(async (tx) => {
         const [aprobado] = await tx.update(doctor).set({ aprobado: true }).where(eq(doctor.id, doctorId)).returning()

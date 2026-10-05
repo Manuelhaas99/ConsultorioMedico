@@ -1,17 +1,9 @@
-// Representaciones seguras de un doctor para responder al cliente (puro, sin I/O). Ver dto.test.ts.
-//
-// Nunca incluyen el correo del doctor, su token o calendario de Google ni el id
-// de su usuario en las vistas públicas.
-
 import type { bloqueoHorario, disponibilidadDoctor, doctor, tipoConsulta, ubicacion } from "@/lib/db/schema"
 import type { VistaDoctor } from "./politica"
 
 type FilaDoctor = typeof doctor.$inferSelect
 
-/**
- * Perfil de doctor como lo ve su propio dueño o un admin: sin el token de
- * Google ni el id del calendario.
- */
+/** Para su dueño o un admin: sin el token de Google ni el id del calendario. */
 export type DoctorPropioDto = Pick<FilaDoctor, "id" | "usuarioId" | "especialidadId" | "cedula" | "bio" | "aprobado" | "creadoEn">
 
 export function doctorPropio(d: FilaDoctor): DoctorPropioDto {
