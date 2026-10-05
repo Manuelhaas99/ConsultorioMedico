@@ -1,10 +1,9 @@
-"use client"; // Los error boundaries deben ser Client Components.
+"use client";
 
 import { useEffect } from "react";
 
 type PropsError = {
   error: Error & { digest?: string };
-  /** Vuelve a pedir y renderizar el segmento (API estable desde Next 16.3). */
   retry: () => void;
 };
 

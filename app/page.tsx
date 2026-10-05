@@ -1,5 +1,3 @@
-// Portada mínima mientras se construye la interfaz (hoy el sistema expone solo la API).
-// Describe únicamente lo que ya existe; no enlaza a páginas que aún no están.
 
 const FUNCIONES = [
   {
