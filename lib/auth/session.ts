@@ -1,6 +1,6 @@
 import "server-only"
 import { headers } from "next/headers"
-import { auth } from "@/lib/auth/index"
+import { getAuth } from "@/lib/auth/index"
 import { rolDeUsuario } from "./repositorio"
 import { tieneRol, type Rol } from "./roles"
 
@@ -23,7 +23,7 @@ export class NoAutorizadoError extends Error {
 }
 
 export async function getSession() {
-    return auth.api.getSession({
+    return getAuth().api.getSession({
         headers: await headers(),
     })
 }
