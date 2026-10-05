@@ -1,14 +1,31 @@
-import { describe, expect, it } from "vitest"
-import { generarSlots, MAX_SLOTS, ventanaDeFranjas, type CitaAgendada, type Intervalo } from "./slots"
+import { afterEach, describe, expect, it } from "vitest"
+import {
+    generarSlots as generarSlotsEnZona,
+    MAX_SLOTS,
+    ventanaDeFranjas,
+    type CitaAgendada,
+    type Intervalo,
+    type ParametrosSlots,
+} from "./slots"
 
-const fecha = "2026-10-12"
+const fecha = "2026-10-12" // lunes
+const zona = "America/Mexico_City"
 
-/** Misma construcción horaria que `generarSlots` (hora local del proceso). */
+/** `generarSlots` en la zona del consultorio de prueba. */
+const generarSlots = (p: Omit<ParametrosSlots, "zona">) => generarSlotsEnZona({ zona, ...p })
+
+/**
+ * Instante de `fecha` a las h:m en Ciudad de México (UTC−6, sin horario de verano
+ * desde 2022). Se construye en UTC para no depender de la zona del proceso.
+ */
 function hora(h: number, m = 0): Date {
-    const d = new Date(fecha)
-    d.setHours(h, m, 0, 0)
-    return d
+    return new Date(Date.UTC(2026, 9, 12, h + 6, m))
 }
+
+const tzOriginal = process.env.TZ
+afterEach(() => {
+    process.env.TZ = tzOriginal
+})
 
 const manana = [{ horaInicio: "09:00:00", horaFin: "11:00:00" }]
 
@@ -97,10 +114,54 @@ describe("ventanaDeFranjas", () => {
             { horaInicio: "16:00:00", horaFin: "19:00:00" },
             { horaInicio: "09:00:00", horaFin: "13:00:00" },
         ]
-        expect(ventanaDeFranjas(fecha, franjas)).toEqual({ inicio: hora(9), fin: hora(19) })
+        expect(ventanaDeFranjas(fecha, franjas, zona)).toEqual({ inicio: hora(9), fin: hora(19) })
     })
 
     it("devuelve null sin franjas", () => {
-        expect(ventanaDeFranjas(fecha, [])).toBeNull()
+        expect(ventanaDeFranjas(fecha, [], zona)).toBeNull()
+    })
+})
+
+describe("zona horaria del consultorio", () => {
+    it.each(["UTC", "America/Mexico_City", "Asia/Tokyo"])(
+        "una agenda de 09:00 a 11:00 en CDMX se ofrece de 15:00Z a 17:00Z con TZ=%s",
+        (tz) => {
+            process.env.TZ = tz
+            const slots = generarSlots({ fecha, duracionMinutos: 60, franjas: manana, bloqueos: [], citas: [] })
+            expect(slots).toEqual([
+                { inicio: "2026-10-12T15:00:00.000Z", fin: "2026-10-12T16:00:00.000Z", disponible: true },
+                { inicio: "2026-10-12T16:00:00.000Z", fin: "2026-10-12T17:00:00.000Z", disponible: true },
+            ])
+        },
+    )
+
+    it("cuando se adelanta el reloj, la franja dura una hora menos en tiempo real", () => {
+        // Nueva York, 2026-03-08: 02:00 EST → 03:00 EDT. De 01:00 a 04:00 hay 2 horas reales.
+        const slots = generarSlotsEnZona({
+            fecha: "2026-03-08",
+            zona: "America/New_York",
+            duracionMinutos: 60,
+            franjas: [{ horaInicio: "01:00", horaFin: "04:00" }],
+            bloqueos: [],
+            citas: [],
+        })
+        expect(slots.map((s) => s.inicio)).toEqual(["2026-03-08T06:00:00.000Z", "2026-03-08T07:00:00.000Z"])
+    })
+
+    it("cuando se atrasa el reloj, la franja dura una hora más en tiempo real", () => {
+        // Nueva York, 2026-11-01: 02:00 EDT → 01:00 EST. De 01:00 a 03:00 hay 3 horas reales.
+        const slots = generarSlotsEnZona({
+            fecha: "2026-11-01",
+            zona: "America/New_York",
+            duracionMinutos: 60,
+            franjas: [{ horaInicio: "01:00", horaFin: "03:00" }],
+            bloqueos: [],
+            citas: [],
+        })
+        expect(slots.map((s) => s.inicio)).toEqual([
+            "2026-11-01T05:00:00.000Z",
+            "2026-11-01T06:00:00.000Z",
+            "2026-11-01T07:00:00.000Z",
+        ])
     })
 })

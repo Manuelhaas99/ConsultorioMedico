@@ -1,23 +1,12 @@
 // Cálculo puro de slots de agenda (sin I/O). Ver pruebas en slots.test.ts.
 //
-// Nota: por ahora conserva el manejo horario histórico (`new Date(fecha)` + `setHours`
-// en la zona del proceso). La corrección de zona horaria se hace por separado (C6).
+// La disponibilidad semanal está en hora local del consultorio; `fecha` es un día
+// de calendario en esa zona. Los slots se devuelven como instantes ISO (UTC).
 
-import type { diaSemanaEnum } from "@/lib/db/schema"
 import { chocaConCitas, seTraslapan, type EstadoCita, type Intervalo } from "./intervalos"
+import { aInstante, diaSemanaDeFecha, type DiaSemana } from "./zona-horaria"
 
-export type DiaSemana = (typeof diaSemanaEnum.enumValues)[number]
-
-/** Índices de `Date#getDay` (0 = domingo) a nombre de día del esquema. */
-const DIAS_SEMANA = [
-    "domingo",
-    "lunes",
-    "martes",
-    "miercoles",
-    "jueves",
-    "viernes",
-    "sabado",
-] as const satisfies readonly DiaSemana[]
+export { diaSemanaDeFecha, type DiaSemana }
 
 /**
  * Tope de seguridad de slots generados por llamada. Con la duración mínima (5 min)
@@ -37,8 +26,10 @@ export type Franja = { horaInicio: string; horaFin: string }
 export type Slot = { inicio: string; fin: string; disponible: boolean }
 
 export type ParametrosSlots = {
-    /** Fecha YYYY-MM-DD ya validada. */
+    /** Fecha YYYY-MM-DD ya validada, en el calendario del consultorio. */
     fecha: string
+    /** Zona IANA del consultorio, p. ej. `America/Mexico_City`. */
+    zona: string
     /** Duración de cada slot en minutos (entero positivo). */
     duracionMinutos: number
     franjas: readonly Franja[]
@@ -48,36 +39,27 @@ export type ParametrosSlots = {
     citas: readonly CitaAgendada[]
 }
 
-export function diaSemanaDeFecha(fecha: string): DiaSemana | undefined {
-    return DIAS_SEMANA[new Date(fecha).getDay()]
-}
-
 /**
  * Intervalo que cubren las franjas en `fecha`, o `null` si no hay franjas.
  * Sirve para consultar solo los bloqueos y citas que pueden afectar los slots.
  */
-export function ventanaDeFranjas(fecha: string, franjas: readonly Franja[]): Intervalo | null {
+export function ventanaDeFranjas(fecha: string, franjas: readonly Franja[], zona: string): Intervalo | null {
     if (franjas.length === 0) return null
-    const inicios = franjas.map((f) => aHoraDelDia(fecha, f.horaInicio).getTime())
-    const fines = franjas.map((f) => aHoraDelDia(fecha, f.horaFin).getTime())
+    const inicios = franjas.map((f) => aInstante(fecha, f.horaInicio, zona).getTime())
+    const fines = franjas.map((f) => aInstante(fecha, f.horaFin, zona).getTime())
     return { inicio: new Date(Math.min(...inicios)), fin: new Date(Math.max(...fines)) }
 }
 
-function aHoraDelDia(fecha: string, hora: string): Date {
-    const [h, m] = hora.split(":").map(Number)
-    const d = new Date(fecha)
-    d.setHours(h, m, 0, 0)
-    return d
-}
-
 /**
- * Genera los slots consecutivos de `duracionMinutos` dentro de cada franja.
+ * Genera los slots consecutivos de `duracionMinutos` dentro de cada franja,
+ * interpretando sus horas en `zona`. Los slots avanzan en tiempo real: en un día
+ * con cambio de horario una franja de 01:00 a 04:00 dura 2 o 4 horas, no 3.
  * Un slot no está disponible si traslapa (intervalos semiabiertos) un bloqueo o
  * una cita que ocupa horario, aunque la cita empiece antes o termine después del slot.
  * Lanza `RangeError` si la duración no es un entero positivo: con 0, negativos o
  * fracciones de milisegundo el ciclo no avanzaría.
  */
-export function generarSlots({ fecha, duracionMinutos, franjas, bloqueos, citas }: ParametrosSlots): Slot[] {
+export function generarSlots({ fecha, zona, duracionMinutos, franjas, bloqueos, citas }: ParametrosSlots): Slot[] {
     if (!Number.isInteger(duracionMinutos) || duracionMinutos <= 0) {
         throw new RangeError(`Duración de slot inválida: ${duracionMinutos}`)
     }
@@ -85,8 +67,8 @@ export function generarSlots({ fecha, duracionMinutos, franjas, bloqueos, citas 
     const slots: Slot[] = []
 
     for (const franja of franjas) {
-        let inicio = aHoraDelDia(fecha, franja.horaInicio)
-        const limite = aHoraDelDia(fecha, franja.horaFin)
+        let inicio = aInstante(fecha, franja.horaInicio, zona)
+        const limite = aInstante(fecha, franja.horaFin, zona)
 
         while (inicio < limite && slots.length < MAX_SLOTS) {
             const fin = new Date(inicio.getTime() + duracionMs)

@@ -70,3 +70,24 @@ describe("índices y restricciones", () => {
         expect(configDe(tabla).checks.map((c) => c.name)).toContain(nombre)
     })
 })
+
+/**
+ * C6: todo instante se guarda como `timestamp with time zone`. Un `timestamp`
+ * sin zona depende de la zona de quien escribe y lee (servidor, sesión de Postgres).
+ */
+describe("instantes con zona horaria", () => {
+    const columnasTimestamp = tablas.flatMap((tabla) => {
+        const { name, columns } = getTableConfig(tabla)
+        return columns
+            .filter((c) => c.getSQLType().startsWith("timestamp"))
+            .map((c) => ({ tabla: name, columna: c.name, tipo: c.getSQLType() }))
+    })
+
+    it("hay columnas timestamp que revisar", () => {
+        expect(columnasTimestamp.length).toBeGreaterThan(0)
+    })
+
+    it.each(columnasTimestamp)("$tabla.$columna es timestamp with time zone", ({ tipo }) => {
+        expect(tipo).toBe("timestamp with time zone")
+    })
+})
