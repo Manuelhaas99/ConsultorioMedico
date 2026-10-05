@@ -7,8 +7,6 @@ import { doctorIdSchema } from "@/lib/doctores/schemas"
 import { obtenerBloqueos } from "@/lib/doctores/servicio"
 import { errorJson } from "@/lib/http"
 
-// GET /api/doctors/[id]/blocks — el doctor y sus secretarios ven todos los bloqueos con motivo;
-// los demás, solo los intervalos vigentes sin motivo (404 si el doctor no está aprobado y no es tuyo)
 export async function GET(_request: NextRequest, ctx: RouteContext<"/api/doctors/[id]/blocks">) {
     try {
         const id = doctorIdSchema.safeParse((await ctx.params).id)

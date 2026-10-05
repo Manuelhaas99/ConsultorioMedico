@@ -2,7 +2,6 @@ import { z } from "zod"
 
 export const doctorIdSchema = z.uuid({ error: "El identificador del doctor no es válido" })
 
-/** Cuerpo de `POST /api/doctors`: solicitud de registro como médico (queda pendiente de aprobación). */
 export const registrarDoctorSchema = z.object({
     especialidadId: z.uuid({ error: "La especialidad es requerida y debe ser válida" }),
     cedula: z
@@ -21,7 +20,6 @@ export const registrarDoctorSchema = z.object({
 
 export type RegistrarDoctorEntrada = z.infer<typeof registrarDoctorSchema>
 
-/** Query de `GET /api/doctors`: filtros opcionales del directorio público. */
 export const listarDoctoresQuerySchema = z.object({
     especialidad: z.uuid({ error: "La especialidad no es válida" }).optional(),
     ciudad: z

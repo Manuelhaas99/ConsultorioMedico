@@ -4,7 +4,6 @@ import {listarDoctoresQuerySchema, registrarDoctorSchema} from "@/lib/doctores/s
 import {listarDoctores, registrarDoctor, type ErrorRegistrarDoctor} from "@/lib/doctores/servicio"
 import {errorJson, leerCuerpo, leerQuery} from "@/lib/http"
 
-// GET /api/doctors?especialidad=<uuid>&ciudad=<texto> — directorio público de doctores aprobados
 export async function GET(request: NextRequest) {
     const query = leerQuery(request, listarDoctoresQuerySchema)
     if (!query.ok) return query.response
@@ -25,8 +24,6 @@ const RESPUESTAS_ERROR_REGISTRO = {
     ESPECIALIDAD_INVALIDA: [400, "La especialidad no existe"],
 } as const satisfies Record<ErrorRegistrarDoctor, readonly [number, string]>
 
-// POST /api/doctors — solicitud de registro como doctor; queda pendiente de aprobación
-// y el usuario conserva su rol hasta que un admin la apruebe (PATCH /api/doctors/[id]/aprobacion).
 export async function POST(request: NextRequest) {
     try {
         const session = await getSession()
