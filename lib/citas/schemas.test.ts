@@ -85,7 +85,7 @@ describe("crearCitaSchema", () => {
     })
 })
 
-describe("actualizarCitaSchema (C8)", () => {
+describe("actualizarCitaSchema", () => {
     it("los estados coinciden con el enum de la base", () => {
         expect([...ESTADOS_CITA]).toEqual(estadoCitaEnum.enumValues)
     })
