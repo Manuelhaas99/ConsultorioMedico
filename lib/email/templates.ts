@@ -14,7 +14,8 @@ export function textosConfirmacion(estado: EstadoConfirmacion): { titulo: string
     return estado === "pendiente"
         ? {
               titulo: "Recibimos tu solicitud de cita",
-              mensaje: "Registramos tu cita. El consultorio la revisará y te avisaremos si hay algún cambio.",
+              // No se promete avisar de cambios: hoy no existe ninguna notificación al cambiar el estado.
+              mensaje: "Registramos tu cita. Queda pendiente hasta que el consultorio la confirme.",
           }
         : { titulo: "Cita agendada", mensaje: "Tu cita quedó agendada y confirmada por el consultorio." }
 }

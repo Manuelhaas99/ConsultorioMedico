@@ -109,6 +109,12 @@ describe("textos consistentes con el estado de la cita (M5)", () => {
         expect(asuntoConfirmacion("Dra. López", "pendiente")).toBe("Recibimos tu solicitud de cita con Dra. López")
     })
 
+    it("no promete avisos que el sistema no envía", () => {
+        // No hay notificación al confirmar o cancelar: el correo no puede prometerla.
+        expect(textosConfirmacion("pendiente").mensaje).not.toMatch(/avisaremos|te avisamos|notificaremos/i)
+        expect(textosConfirmacion("pendiente").mensaje).toMatch(/pendiente/i)
+    })
+
     it("una cita confirmada se anuncia como agendada", () => {
         expect(templateConfirmacionCita({ ...base, estado: "confirmada" })).toContain("Cita agendada")
         expect(asuntoConfirmacion("Dra. López", "confirmada")).toBe("Cita agendada con Dra. López")
