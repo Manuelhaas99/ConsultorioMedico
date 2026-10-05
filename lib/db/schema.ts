@@ -7,7 +7,10 @@ import {
     uuid,
     pgEnum,
     time,
+    index,
+    check,
 } from "drizzle-orm/pg-core"
+import { sql } from "drizzle-orm"
 
 // ── Enums ──────────────────────────────────────────
 export const rolEnum = pgEnum("rol", [
@@ -72,7 +75,9 @@ export const doctor = pgTable("doctor", {
     googleCalendarId: text("google_calendar_id"),
     googleRefreshToken: text("google_refresh_token"),
     creadoEn: timestamp("creado_en").defaultNow().notNull(),
-})
+}, (t) => [
+    index("doctor_usuario_id_idx").on(t.usuarioId),
+])
 
 // ── Ubicacion (consultorio) ────────────────────────
 export const ubicacion = pgTable("ubicacion", {
@@ -86,7 +91,9 @@ export const ubicacion = pgTable("ubicacion", {
     colonia: text("colonia"),
     urlMapa: text("url_mapa"),
     creadoEn: timestamp("creado_en").defaultNow().notNull(),
-})
+}, (t) => [
+    index("ubicacion_doctor_id_idx").on(t.doctorId),
+])
 
 // ── Tipo de consulta ───────────────────────────────
 export const tipoConsulta = pgTable("tipo_consulta", {
@@ -97,7 +104,10 @@ export const tipoConsulta = pgTable("tipo_consulta", {
     nombre: text("nombre").notNull(),
     duracionMinutos: integer("duracion_minutos").notNull().default(30),
     creadoEn: timestamp("creado_en").defaultNow().notNull(),
-})
+}, (t) => [
+    index("tipo_consulta_doctor_id_idx").on(t.doctorId),
+    check("tipo_consulta_duracion_positiva", sql`${t.duracionMinutos} > 0`),
+])
 
 // ── Disponibilidad del doctor ──────────────────────
 export const disponibilidadDoctor = pgTable("disponibilidad_doctor", {
@@ -110,7 +120,10 @@ export const disponibilidadDoctor = pgTable("disponibilidad_doctor", {
     diaSemana: diaSemanaEnum("dia_semana").notNull(),
     horaInicio: time("hora_inicio").notNull(),
     horaFin: time("hora_fin").notNull(),
-})
+}, (t) => [
+    index("disponibilidad_doctor_doctor_id_idx").on(t.doctorId),
+    check("disponibilidad_doctor_horas_validas", sql`${t.horaFin} > ${t.horaInicio}`),
+])
 
 // ── Bloqueo de horario ─────────────────────────────
 export const bloqueoHorario = pgTable("bloqueo_horario", {
@@ -122,7 +135,10 @@ export const bloqueoHorario = pgTable("bloqueo_horario", {
     fechaFin: timestamp("fecha_fin").notNull(),
     motivo: text("motivo"),
     creadoEn: timestamp("creado_en").defaultNow().notNull(),
-})
+}, (t) => [
+    index("bloqueo_horario_doctor_id_idx").on(t.doctorId),
+    check("bloqueo_horario_fechas_validas", sql`${t.fechaFin} > ${t.fechaInicio}`),
+])
 
 // ── Secretario ─────────────────────────────────────
 export const secretario = pgTable("secretario", {
@@ -134,7 +150,9 @@ export const secretario = pgTable("secretario", {
         .notNull()
         .references(() => doctor.id, { onDelete: "cascade" }),
     creadoEn: timestamp("creado_en").defaultNow().notNull(),
-})
+}, (t) => [
+    index("secretario_doctor_id_idx").on(t.doctorId),
+])
 
 // ── Cita ───────────────────────────────────────────
 // La restricción de exclusión `cita_sin_traslape_por_doctor` (sin citas activas
@@ -167,7 +185,18 @@ export const cita = pgTable("cita", {
     asistio: boolean("asistio"),
     creadoEn: timestamp("creado_en").defaultNow().notNull(),
     actualizadoEn: timestamp("actualizado_en").defaultNow().notNull(),
-})
+}, (t) => [
+    // Agenda del doctor por rango de fechas (slots, verificación de traslape).
+    index("cita_doctor_id_fecha_inicio_idx").on(t.doctorId, t.fechaInicio),
+    index("cita_paciente_id_idx").on(t.pacienteId),
+    check("cita_fechas_validas", sql`${t.fechaFin} > ${t.fechaInicio}`),
+    // Toda cita pertenece a un paciente con cuenta o a un invitado identificable.
+    check(
+        "cita_paciente_o_invitado",
+        // coalesce: con NULL la comparación da NULL y el CHECK lo dejaría pasar.
+        sql`${t.pacienteId} IS NOT NULL OR (coalesce(${t.invitadoNombre}, '') <> '' AND coalesce(${t.invitadoEmail}, '') <> '')`,
+    ),
+])
 
 // ── Better-auth tables ─────────────────────────────
 export const session = pgTable("session", {
