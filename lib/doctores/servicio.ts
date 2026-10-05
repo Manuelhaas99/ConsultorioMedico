@@ -78,16 +78,11 @@ export async function aprobarDoctor(doctorId: string, actor: Actor): Promise<Res
     return { ok: true, doctor: doctorPropio(resultado.doctor), rolUsuario: resultado.rol }
 }
 
-/** Directorio público: solo doctores aprobados, sin correos. */
 export async function listarDoctores({ especialidad, ciudad }: ListarDoctoresQuery): Promise<DoctorPublicoDto[]> {
     const filas = await doctoresAprobados({ especialidadId: especialidad, ciudad })
     return filas.map(doctorPublico)
 }
 
-/**
- * Cómo ve `actor` (o un anónimo si es `null`) al doctor, o `null` si no debe
- * verlo: un doctor sin aprobar solo es visible para sí mismo, su personal y los admins.
- */
 async function vistaPara(doctorId: string, actor: Actor | null): Promise<VistaDoctor | null> {
     const usuarioId = actor?.usuarioId ?? null
     const [relacion, rol] = await Promise.all([
@@ -121,10 +116,7 @@ export async function obtenerDisponibilidad(
     return { ok: true, data: (await disponibilidadDe(doctorId)).map(disponibilidadPublica) }
 }
 
-/**
- * Bloqueos del doctor. El doctor y sus secretarios ven todos con su motivo;
- * los demás solo ven los intervalos que aún no terminan, sin motivo.
- */
+/** Quien no es personal del doctor solo ve los bloqueos que aún no terminan. */
 export async function obtenerBloqueos(
     doctorId: string,
     actor: Actor | null,

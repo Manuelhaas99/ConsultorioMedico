@@ -4,7 +4,6 @@ import {listarDoctoresQuerySchema, registrarDoctorSchema} from "@/lib/doctores/s
 import {listarDoctores, registrarDoctor, type ErrorRegistrarDoctor} from "@/lib/doctores/servicio"
 import {errorJson, leerCuerpo, leerQuery} from "@/lib/http"
 
-// GET /api/doctors?especialidad=<uuid>&ciudad=<texto> — directorio público de doctores aprobados
 export async function GET(request: NextRequest) {
     const query = leerQuery(request, listarDoctoresQuerySchema)
     if (!query.ok) return query.response

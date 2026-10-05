@@ -20,7 +20,6 @@ export const registrarDoctorSchema = z.object({
 
 export type RegistrarDoctorEntrada = z.infer<typeof registrarDoctorSchema>
 
-/** Query de `GET /api/doctors`: filtros opcionales del directorio público. */
 export const listarDoctoresQuerySchema = z.object({
     especialidad: z.uuid({ error: "La especialidad no es válida" }).optional(),
     ciudad: z

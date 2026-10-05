@@ -15,21 +15,18 @@ export function rolTrasAprobacion(rolActual: Rol): Rol {
 }
 
 /**
- * Cómo ve a un doctor quien hace la petición:
- * - `personal`: el propio doctor o uno de sus secretarios (incluye datos internos como el motivo de los bloqueos).
- * - `admin`: un administrador (ve doctores pendientes de aprobación, pero no datos internos de su agenda).
- * - `publica`: cualquiera, solo si el doctor está aprobado.
+ * - `personal`: el doctor o sus secretarios; incluye datos internos como el motivo de los bloqueos.
+ * - `admin`: ve doctores sin aprobar, pero no los datos internos de su agenda.
+ * - `publica`: solo doctores aprobados.
  */
 export type VistaDoctor = "publica" | "personal" | "admin"
 
-/** Hechos sobre quien pide, ya verificados por el servicio. */
 export type HechosVistaDoctor = {
     esDueno: boolean
     esSecretario: boolean
     esAdmin: boolean
 }
 
-/** Vista que corresponde, o `null` si el doctor no debe ser visible (se responde 404). */
 export function vistaDeDoctor(aprobado: boolean, hechos: HechosVistaDoctor): VistaDoctor | null {
     if (hechos.esDueno || hechos.esSecretario) return "personal"
     if (hechos.esAdmin) return "admin"
