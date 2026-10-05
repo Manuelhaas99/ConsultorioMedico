@@ -97,8 +97,6 @@ export async function POST(request: NextRequest) {
         // Generar token de gestión para invitados
         const tokenGestion = randomBytes(32).toString("hex")
 
-        // La verificación de horario libre y la garantía ante reservas
-        // simultáneas (restricción de exclusión en la base) viven en el servicio.
         const reserva = await reservarCita({
             doctorId,
             pacienteId: session?.user.id ?? null,
