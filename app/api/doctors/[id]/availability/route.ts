@@ -7,7 +7,6 @@ import { doctorIdSchema } from "@/lib/doctores/schemas"
 import { obtenerDisponibilidad } from "@/lib/doctores/servicio"
 import { errorJson } from "@/lib/http"
 
-// GET /api/doctors/[id]/availability — horario semanal del doctor (404 si no está aprobado y no es tuyo)
 export async function GET(_request: NextRequest, ctx: RouteContext<"/api/doctors/[id]/availability">) {
     try {
         const id = doctorIdSchema.safeParse((await ctx.params).id)

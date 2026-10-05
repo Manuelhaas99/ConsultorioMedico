@@ -1,15 +1,12 @@
 import { z } from "zod"
 
-/** Límites de duración de un slot, en minutos. */
 export const DURACION_MIN_MINUTOS = 5
 export const DURACION_MAX_MINUTOS = 240
 export const DURACION_DEFAULT_MINUTOS = 30
 
 export const doctorIdSchema = z.uuid({ error: "El identificador del doctor no es válido" })
 
-/** Query de `GET /api/doctors/[id]/slots`. */
 export const slotsQuerySchema = z.object({
-    // `z.iso.date()` exige YYYY-MM-DD y una fecha de calendario real (rechaza 2026-02-30).
     fecha: z.iso.date({ error: "La fecha es requerida y debe ser una fecha válida YYYY-MM-DD" }),
     duracion: z.coerce
         .number({ error: "La duración debe ser un número de minutos" })
@@ -21,16 +18,13 @@ export const slotsQuerySchema = z.object({
 
 export type SlotsQuery = z.infer<typeof slotsQuerySchema>
 
-/**
- * Instante ISO 8601 con zona explícita (`Z` o `±HH:MM`). Sin zona, el mismo texto
- * significaría horas distintas según el servidor, así que se rechaza.
- */
+// Sin zona explícita, el mismo texto significaría horas distintas según el servidor.
 const instanteSchema = (campo: string) =>
     z.iso
         .datetime({ offset: true, error: `${campo} debe ser una fecha y hora ISO 8601 con zona, p. ej. 2026-10-12T09:00:00-06:00` })
         .transform((valor) => new Date(valor))
 
-/** Texto opcional: recorta espacios y trata "" como ausente. */
+/** Trata "" como ausente. */
 const textoOpcional = (max: number, mensaje: string) =>
     z
         .string()
@@ -39,7 +33,6 @@ const textoOpcional = (max: number, mensaje: string) =>
         .transform((v) => v || undefined)
         .optional()
 
-/** Cuerpo de `POST /api/appointments`. Las reglas que requieren datos (disponibilidad, bloqueos...) viven en el servicio. */
 export const crearCitaSchema = z
     .object({
         doctorId: doctorIdSchema,
@@ -64,10 +57,9 @@ export type CrearCitaEntrada = z.output<typeof crearCitaSchema>
 
 export const citaIdSchema = z.uuid({ error: "El identificador de la cita no es válido" })
 
-/** Estados posibles de una cita (los mismos valores que el enum `estado_cita` de la base). */
 export const ESTADOS_CITA = ["pendiente", "confirmada", "cancelada", "completada", "no_show"] as const
 
-/** Texto editable: recorta espacios; "" o `null` lo borran (se guarda `null`). */
+/** "" o `null` borran el valor. */
 const textoEditable = (max: number, mensaje: string) =>
     z
         .string()
@@ -77,10 +69,7 @@ const textoEditable = (max: number, mensaje: string) =>
         .transform((v) => v || null)
         .optional()
 
-/**
- * Cuerpo de `PATCH /api/appointments/[id]`. Qué campos puede cambiar cada quien lo
- * decide la política (`politica.ts`); aquí solo se valida forma y tamaño.
- */
+/** Solo valida forma y tamaño; qué campos puede cambiar cada rol lo decide la política. */
 export const actualizarCitaSchema = z
     .strictObject(
         {

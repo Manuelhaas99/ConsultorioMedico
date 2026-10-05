@@ -9,7 +9,7 @@ import type { UbicacionCita } from "./ubicacion"
 
 export type DoctorReservable = { id: string; nombre: string; especialidad: string }
 
-/** Doctor aprobado con los datos que necesita una reserva, o `undefined` si no existe o no está aprobado. */
+/** Solo doctores aprobados. */
 export async function doctorReservable(doctorId: string): Promise<DoctorReservable | undefined> {
     const [fila] = await db
         .select({ id: doctor.id, nombre: usuario.name, especialidad: especialidad.nombre })
@@ -21,7 +21,6 @@ export async function doctorReservable(doctorId: string): Promise<DoctorReservab
     return fila
 }
 
-/** Ubicación si pertenece al doctor, o `undefined` si no existe o es de otro doctor. */
 export async function ubicacionDelDoctor(ubicacionId: string, doctorId: string): Promise<UbicacionCita | undefined> {
     const [fila] = await db
         .select({ nombre: ubicacion.nombre, direccion: ubicacion.direccion, colonia: ubicacion.colonia, ciudad: ubicacion.ciudad })
@@ -54,7 +53,6 @@ export async function franjasDelDia(doctorId: string, diaSemana: DiaSemana): Pro
         .where(and(eq(disponibilidadDoctor.doctorId, doctorId), eq(disponibilidadDoctor.diaSemana, diaSemana)))
 }
 
-/** Bloqueos del doctor que traslapan `rango` (intervalos semiabiertos). */
 export async function bloqueosQueTraslapan(doctorId: string, rango: Intervalo): Promise<Intervalo[]> {
     return db
         .select({ inicio: bloqueoHorario.fechaInicio, fin: bloqueoHorario.fechaFin })
@@ -68,10 +66,6 @@ export async function bloqueosQueTraslapan(doctorId: string, rango: Intervalo): 
         )
 }
 
-/**
- * Citas del doctor que ocupan horario y traslapan `rango`, aunque empiecen antes
- * o terminen después de él.
- */
 export async function citasQueTraslapan(doctorId: string, rango: Intervalo): Promise<CitaAgendada[]> {
     return db
         .select({ inicio: cita.fechaInicio, fin: cita.fechaFin, estado: cita.estado })
@@ -89,10 +83,6 @@ export async function citasQueTraslapan(doctorId: string, rango: Intervalo): Pro
 export type NuevaCita = typeof cita.$inferInsert
 export type CitaRegistrada = typeof cita.$inferSelect
 
-/**
- * Inserta la cita. Puede lanzar la violación de `cita_sin_traslape_por_doctor`
- * si otra petición reservó un horario traslapado al mismo tiempo.
- */
 export async function insertarCita(valores: NuevaCita): Promise<CitaRegistrada> {
     const [nueva] = await db.insert(cita).values(valores).returning()
     if (!nueva) throw new Error("La inserción de la cita no devolvió filas")
@@ -104,13 +94,11 @@ export async function citaPorId(id: string): Promise<CitaRegistrada | undefined>
     return fila
 }
 
-/** Cita de invitado cuyo token de gestión tiene este hash SHA-256. */
 export async function citaPorTokenHash(hash: string): Promise<CitaRegistrada | undefined> {
     const [fila] = await db.select().from(cita).where(eq(cita.tokenGestionHash, hash)).limit(1)
     return fila
 }
 
-/** Indica si el usuario es el doctor `doctorId` o uno de sus secretarios. */
 export async function esPersonalDelDoctor(usuarioId: string, doctorId: string): Promise<boolean> {
     const [fila] = await db
         .select({ id: doctor.id })
@@ -130,10 +118,7 @@ export async function esPersonalDelDoctor(usuarioId: string, doctorId: string): 
 
 export type CambiosAplicables = Partial<Pick<NuevaCita, "estado" | "motivoConsulta" | "notas">>
 
-/**
- * Aplica `cambios` solo si la cita sigue en `estadoEsperado` (control optimista):
- * si otra petición cambió el estado entre la lectura y la escritura, devuelve `undefined`.
- */
+/** Control optimista: devuelve `undefined` si la cita ya no está en `estadoEsperado`. */
 export async function actualizarCitaSiEstado(
     id: string,
     estadoEsperado: EstadoCita,

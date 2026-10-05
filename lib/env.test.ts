@@ -24,7 +24,6 @@ describe("leerEntorno", () => {
     })
 
     it("no depende de que el grupo no pedido esté completo", () => {
-        // El build y los endpoints sin correo no deben requerir RESEND_API_KEY.
         expect(leerEntorno("app", { BETTER_AUTH_URL: "https://citas.example.com" })).toEqual({
             BETTER_AUTH_URL: "https://citas.example.com",
         })

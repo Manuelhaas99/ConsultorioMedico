@@ -10,7 +10,7 @@ import {
     type EstadoConfirmacion,
 } from "./templates"
 
-/** Resend rechazó el envío (Resend no lanza: devuelve `{ error }`). */
+/** Resend no lanza: devuelve `{ error }`. */
 export class EnvioCorreoError extends Error {
     constructor(mensaje: string) {
         super(mensaje)
@@ -20,7 +20,6 @@ export class EnvioCorreoError extends Error {
 
 type CorreoSaliente = { to: string; subject: string; html: string; idempotencyKey?: string }
 
-/** Envía con el remitente configurado (EMAIL_FROM) y lanza `EnvioCorreoError` si Resend lo rechaza. */
 async function enviar({ to, subject, html, idempotencyKey }: CorreoSaliente): Promise<{ id: string }> {
     const from = resolverRemitente(env("correo"))
     const { data, error } = await getResend().emails.send(
@@ -91,7 +90,7 @@ export async function enviarRecordatorioCita({
     invitado: boolean
     tiempoRestante: "24h" | "1h"
     citaId: string
-    /** Misma clave = mismo correo: Resend no lo reenvía si un reintento repite la petición. */
+    /** Resend no reenvía un correo con una clave ya usada. */
     idempotencyKey: string
 }) {
     return enviar({

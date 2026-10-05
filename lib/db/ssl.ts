@@ -1,25 +1,16 @@
-// Configuración TLS de la conexión a Postgres (pura, sin I/O). Ver ssl.test.ts.
-//
-// Por defecto el certificado del servidor SIEMPRE se verifica (cadena y nombre
-// de host), con las CA del sistema o con la que se dé en DATABASE_CA_CERT.
-// Desactivar TLS es una decisión explícita (DATABASE_SSL=disable o
-// sslmode=disable), pensada para un Postgres local o de CI sin SSL. No existe
-// un modo que acepte cualquier certificado.
+// No existe un modo que acepte cualquier certificado: desactivar TLS es explícito y solo para un Postgres local o de CI.
 
-/** Opciones TLS que acepta `pg` (subconjunto de `tls.ConnectionOptions`). */
 export type SslVerificado = { rejectUnauthorized: true; ca?: string }
 
 export type ConfiguracionConexion = {
-    /** DATABASE_URL sin los parámetros `sslmode`/`ssl`, que ya quedaron resueltos en `ssl`. */
     connectionString: string
     ssl: false | SslVerificado
 }
 
 export type VariablesBaseDatos = {
     DATABASE_URL?: string
-    /** `disable` para conectarse sin TLS; `verify-full` (o vacío) para verificar el certificado. */
     DATABASE_SSL?: string
-    /** Certificado CA del proveedor en PEM (admite `\n` escapados, como suelen guardarlo los paneles de variables). */
+    /** Admite `\n` escapados, como suelen guardarlo los paneles de variables de entorno. */
     DATABASE_CA_CERT?: string
 }
 
@@ -30,10 +21,9 @@ export class ConfiguracionBaseDatosError extends Error {
     }
 }
 
-/** Valores de `sslmode` (libpq) que se traducen a TLS con verificación completa. */
+/** Incluso `prefer` y `allow` se tratan como TLS con verificación completa. */
 const MODOS_VERIFICADOS = new Set(["require", "verify-ca", "verify-full", "prefer", "allow"])
 
-/** Parámetros de la URL que `pg` usaría para construir su propio `ssl` y pisar el nuestro. */
 const PARAMETROS_SSL_RESUELTOS = ["sslmode", "ssl"] as const
 const PARAMETROS_CERTIFICADO = ["sslrootcert", "sslcert", "sslkey"] as const
 
@@ -46,11 +36,6 @@ function leerCa(valor: string | undefined): string | undefined {
     return pem
 }
 
-/**
- * Resuelve la configuración TLS a partir de las variables de entorno.
- * Lanza `ConfiguracionBaseDatosError` si falta la URL, si se pide un modo que no
- * verifica el certificado (`sslmode=no-verify`) o si los valores se contradicen.
- */
 export function configuracionConexion(env: VariablesBaseDatos): ConfiguracionConexion {
     const original = env.DATABASE_URL?.trim()
     if (!original) throw new ConfiguracionBaseDatosError("DATABASE_URL no está definida")
@@ -94,7 +79,7 @@ export function configuracionConexion(env: VariablesBaseDatos): ConfiguracionCon
         throw new ConfiguracionBaseDatosError("sslrootcert/sslcert/sslkey no tienen sentido con TLS desactivado")
     }
 
-    // Quitamos sslmode/ssl: si los dejáramos, pg construiría su propio `ssl` y descartaría el nuestro.
+    // Si se quedaran en la URL, pg construiría su propio `ssl` y descartaría este.
     for (const p of PARAMETROS_SSL_RESUELTOS) url.searchParams.delete(p)
     const connectionString = url.toString()
 

@@ -1,9 +1,6 @@
-// Representaciones seguras de una cita para responder al cliente (puro, sin I/O).
-
 import type { CitaRegistrada } from "./repositorio"
 import type { RolEnCita } from "./politica"
 
-/** Cita como la ve el paciente: sin token de gestión ni notas internas del personal. */
 export type CitaPacienteDto = Pick<
     CitaRegistrada,
     | "id"
@@ -22,7 +19,6 @@ export type CitaPacienteDto = Pick<
     | "actualizadoEn"
 >
 
-/** Cita como la ve el doctor o su secretario: incluye notas y asistencia. */
 export type CitaPersonalDto = CitaPacienteDto & Pick<CitaRegistrada, "notas" | "asistio">
 
 export function citaParaPaciente(c: CitaRegistrada): CitaPacienteDto {

@@ -73,7 +73,6 @@ describe("desplazamientoMs", () => {
 describe("fechaLocal", () => {
     it.each(ZONAS_DEL_PROCESO)("usa el calendario de la zona con TZ=%s", (tz) => {
         process.env.TZ = tz
-        // 03:00Z del 13 todavía es 12 de octubre en CDMX.
         expect(fechaLocal(new Date("2026-10-13T03:00:00Z"), CDMX)).toBe("2026-10-12")
         expect(fechaLocal(new Date("2026-10-13T03:00:00Z"), "UTC")).toBe("2026-10-13")
     })

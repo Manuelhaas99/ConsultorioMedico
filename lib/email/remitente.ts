@@ -1,11 +1,6 @@
-// Remitente de los correos (pura, sin I/O). Ver remitente.test.ts.
-
 import { ConfiguracionEntornoError } from "@/lib/env"
 
-/**
- * Remitente de pruebas de Resend: solo entrega al dueño de la cuenta, así que
- * únicamente se usa fuera de producción cuando no hay EMAIL_FROM.
- */
+/** Remitente de pruebas de Resend: solo entrega al dueño de la cuenta. */
 export const REMITENTE_DESARROLLO = "Citas Médicas <onboarding@resend.dev>"
 
 export function resolverRemitente({ EMAIL_FROM, NODE_ENV }: { EMAIL_FROM?: string; NODE_ENV?: string }): string {
