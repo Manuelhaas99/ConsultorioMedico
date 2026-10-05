@@ -1,6 +1,5 @@
 import type { ErrorActualizarCita } from "@/lib/citas/servicio"
 
-/** Traducción de los errores de negocio de actualizar/cancelar una cita a HTTP. */
 export const RESPUESTAS_ERROR_ACTUALIZAR = {
     NO_ENCONTRADA: [404, "Cita no encontrada"],
     CAMBIO_NO_PERMITIDO: [403, "No tienes permiso para hacer ese cambio en la cita"],
