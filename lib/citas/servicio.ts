@@ -4,7 +4,6 @@ import { chocaConCitas, type Intervalo } from "./intervalos"
 import type { SlotsQuery } from "./schemas"
 import { diaSemanaDeFecha, generarSlots, ventanaDeFranjas, type Slot } from "./slots"
 
-/** Slots del doctor en una fecha, marcando como no disponibles los bloqueados u ocupados. */
 export async function obtenerSlots(doctorId: string, { fecha, duracion }: SlotsQuery): Promise<Slot[]> {
     const diaSemana = diaSemanaDeFecha(fecha)
     if (!diaSemana) return []

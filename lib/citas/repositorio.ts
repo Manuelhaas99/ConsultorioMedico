@@ -12,7 +12,6 @@ export async function franjasDelDia(doctorId: string, diaSemana: DiaSemana): Pro
         .where(and(eq(disponibilidadDoctor.doctorId, doctorId), eq(disponibilidadDoctor.diaSemana, diaSemana)))
 }
 
-/** Bloqueos del doctor que traslapan `rango` (intervalos semiabiertos). */
 export async function bloqueosQueTraslapan(doctorId: string, rango: Intervalo): Promise<Intervalo[]> {
     return db
         .select({ inicio: bloqueoHorario.fechaInicio, fin: bloqueoHorario.fechaFin })
@@ -26,10 +25,6 @@ export async function bloqueosQueTraslapan(doctorId: string, rango: Intervalo): 
         )
 }
 
-/**
- * Citas del doctor que ocupan horario y traslapan `rango`, aunque empiecen antes
- * o terminen después de él.
- */
 export async function citasQueTraslapan(doctorId: string, rango: Intervalo): Promise<CitaAgendada[]> {
     return db
         .select({ inicio: cita.fechaInicio, fin: cita.fechaFin, estado: cita.estado })
