@@ -3,8 +3,7 @@ import * as dotenv from "dotenv"
 
 dotenv.config({ path: ".env.local" })
 
-// `generate` no necesita conexión; `migrate` y `studio` fallan con un mensaje
-// claro de drizzle-kit si falta DATABASE_URL.
+// `generate` no necesita conexión; sin DATABASE_URL solo fallan `migrate` y `studio`.
 const url = process.env.DATABASE_URL
 
 export default defineConfig({

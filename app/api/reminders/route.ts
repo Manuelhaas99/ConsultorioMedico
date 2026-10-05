@@ -6,8 +6,7 @@ import { enviarRecordatorioCita } from "@/lib/email/send"
 import { verificarFirmaQstash } from "@/lib/queue/firma"
 
 export async function POST(request: NextRequest) {
-    // La firma se verifica dentro del handler (y no con un wrapper al importar)
-    // para que las llaves de QStash se lean en tiempo de ejecución, no en el build.
+    // Dentro del handler para que las llaves de QStash se lean en ejecución, no en el build.
     const firma = await verificarFirmaQstash(request)
     if (!firma.ok) {
         return NextResponse.json({ message: "Firma inválida" }, { status: 403 })
@@ -75,7 +74,6 @@ export async function POST(request: NextRequest) {
             especialidad: citaData.especialidadNombre,
             fechaInicio: citaData.fechaInicio,
             fechaFin: citaData.fechaFin,
-            // Solo se guarda el hash del token: el recordatorio de un invitado no puede incluir su enlace.
             invitado: citaData.pacienteId === null,
             tiempoRestante: tipo,
             citaId,

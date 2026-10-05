@@ -33,7 +33,7 @@ describe("esTraslapeDeCitas", () => {
     })
 })
 
-// La versión vigente de la restricción es la de 0003 (tstzrange, C6); 0001 creó la original con tsrange.
+// 0003 recreó con tstzrange la restricción que 0001 creó con tsrange.
 describe("migración de la restricción de exclusión", () => {
     const sql = readFileSync(
         fileURLToPath(new URL("../db/migrations/0003_zona_horaria_timestamptz.sql", import.meta.url)),

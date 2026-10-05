@@ -4,7 +4,6 @@ import { env } from "@/lib/env"
 
 let instancia: Client | null = null
 
-/** Cliente de QStash para publicar mensajes, creado al primer uso. */
 export function getQstashClient(): Client {
     if (!instancia) {
         const { QSTASH_TOKEN, QSTASH_URL } = env("qstashPublicacion")

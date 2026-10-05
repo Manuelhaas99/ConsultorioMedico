@@ -6,14 +6,10 @@ import { actualizarCita, cancelarCita, obtenerCita, type AccesoCita } from "@/li
 import { errorJson, leerCuerpo } from "@/lib/http"
 import { RESPUESTAS_ERROR_ACTUALIZAR } from "../respuestas"
 
-// Gestión de una cita por id con sesión (paciente, doctor dueño o secretario).
-// Los invitados usan /api/appointments/gestion con su token en Authorization.
-
 type Contexto = RouteContext<"/api/appointments/[id]">
 
 type Entrada = { ok: true; acceso: AccesoCita } | { ok: false; response: NextResponse }
 
-/** Valida el id y exige sesión. */
 async function leerEntrada(ctx: Contexto): Promise<Entrada> {
     const id = citaIdSchema.safeParse((await ctx.params).id)
     if (!id.success) {
@@ -24,7 +20,6 @@ async function leerEntrada(ctx: Contexto): Promise<Entrada> {
     return { ok: true, acceso: { citaId: id.data, usuarioId: session.user.id } }
 }
 
-// GET /api/appointments/[id] — obtener cita
 export async function GET(_request: NextRequest, ctx: Contexto) {
     try {
         const entrada = await leerEntrada(ctx)
@@ -39,7 +34,6 @@ export async function GET(_request: NextRequest, ctx: Contexto) {
     }
 }
 
-// PATCH /api/appointments/[id] — el paciente cancela o edita el motivo; el personal cambia estado y notas
 export async function PATCH(request: NextRequest, ctx: Contexto) {
     try {
         const entrada = await leerEntrada(ctx)
