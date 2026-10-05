@@ -6,7 +6,7 @@ import { ESTADOS_QUE_LIBERAN_HORARIO, type Intervalo } from "./intervalos"
 import type { FranjaConUbicacion } from "./reglas"
 import type { CitaAgendada, DiaSemana } from "./slots"
 
-/** Doctor aprobado con los datos que necesita una reserva, o `undefined` si no existe o no está aprobado. */
+/** Solo doctores aprobados. */
 export async function doctorReservable(doctorId: string): Promise<{ id: string; nombre: string } | undefined> {
     const [fila] = await db
         .select({ id: doctor.id, nombre: usuario.name })

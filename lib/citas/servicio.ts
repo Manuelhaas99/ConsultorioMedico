@@ -59,7 +59,6 @@ export async function reservarCita(valores: NuevaCita): Promise<ResultadoReserva
     }
 }
 
-/** Motivos de negocio por los que no se crea una cita. El handler los traduce a HTTP. */
 export type ErrorCrearCita =
     | "RANGO_INVALIDO"
     | "FECHA_EN_PASADO"
@@ -76,25 +75,16 @@ export type ResultadoCrearCita =
     | { ok: true; cita: CitaRegistrada; doctor: { nombre: string }; contacto: Contacto }
     | { ok: false; error: ErrorCrearCita }
 
-/** A quién se notifica la cita (paciente con cuenta o invitado). */
+/** A quién se notifica la cita. */
 export type Contacto = { nombre: string; email: string }
 
-/** Quién reserva: un usuario con sesión o, si es `null`, un invitado. */
 export type ContextoCrearCita = {
+    /** `null`: reserva como invitado. */
     usuario: { id: string; name: string; email: string } | null
-    /** Reloj inyectable para pruebas. */
     ahora?: Date
-    /** Zona del consultorio en la que se interpreta la disponibilidad. */
     zona?: string
 }
 
-/**
- * Crea una cita validando las reglas de negocio:
- * inicio futuro y anterior al fin; doctor aprobado; ubicación y tipo de consulta del
- * mismo doctor; duración igual a la del tipo (o entre los límites si no hay tipo);
- * intervalo completo dentro de la disponibilidad del doctor en la zona del consultorio;
- * sin traslapar bloqueos ni citas activas.
- */
 export async function crearCita(
     entrada: CrearCitaEntrada,
     { usuario, ahora = new Date(), zona = ZONA_CONSULTORIO }: ContextoCrearCita,

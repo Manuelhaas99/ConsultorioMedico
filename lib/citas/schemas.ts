@@ -18,16 +18,13 @@ export const slotsQuerySchema = z.object({
 
 export type SlotsQuery = z.infer<typeof slotsQuerySchema>
 
-/**
- * Instante ISO 8601 con zona explícita (`Z` o `±HH:MM`). Sin zona, el mismo texto
- * significaría horas distintas según el servidor, así que se rechaza.
- */
+// Sin zona explícita, el mismo texto significaría horas distintas según el servidor.
 const instanteSchema = (campo: string) =>
     z.iso
         .datetime({ offset: true, error: `${campo} debe ser una fecha y hora ISO 8601 con zona, p. ej. 2026-10-12T09:00:00-06:00` })
         .transform((valor) => new Date(valor))
 
-/** Texto opcional: recorta espacios y trata "" como ausente. */
+/** Trata "" como ausente. */
 const textoOpcional = (max: number, mensaje: string) =>
     z
         .string()
@@ -36,7 +33,6 @@ const textoOpcional = (max: number, mensaje: string) =>
         .transform((v) => v || undefined)
         .optional()
 
-/** Cuerpo de `POST /api/appointments`. Las reglas que requieren datos (disponibilidad, bloqueos...) viven en el servicio. */
 export const crearCitaSchema = z
     .object({
         doctorId: doctorIdSchema,
