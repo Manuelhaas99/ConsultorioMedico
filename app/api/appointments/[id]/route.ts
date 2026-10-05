@@ -1,207 +1,94 @@
 import { NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db/client"
-import { cita } from "@/lib/db/schema"
-import { eq, and } from "drizzle-orm"
 import { getSession } from "@/lib/auth/session"
+import { citaParaRol } from "@/lib/citas/dto"
+import { actualizarCitaSchema, citaIdSchema } from "@/lib/citas/schemas"
+import {
+    actualizarCita,
+    cancelarCita,
+    obtenerCita,
+    type ErrorActualizarCita,
+    type IdentidadCita,
+} from "@/lib/citas/servicio"
+import { errorJson, leerCuerpo } from "@/lib/http"
 
-// GET /api/appointments/[id] — obtener cita
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+type Contexto = RouteContext<"/api/appointments/[id]">
+
+/** Traducción de los errores de negocio de actualizar/cancelar a HTTP. */
+const RESPUESTAS_ERROR = {
+    NO_ENCONTRADA: [404, "Cita no encontrada"],
+    CAMBIO_NO_PERMITIDO: [403, "No tienes permiso para hacer ese cambio en la cita"],
+    CITA_NO_EDITABLE: [409, "La cita ya no se puede modificar"],
+    TRANSICION_INVALIDA: [409, "La cita no puede pasar a ese estado desde su estado actual"],
+    CONFLICTO: [409, "La cita cambió mientras se procesaba la solicitud; vuelve a intentarlo"],
+} as const satisfies Record<ErrorActualizarCita, readonly [number, string]>
+
+type Entrada = { ok: true; id: string; identidad: IdentidadCita } | { ok: false; response: NextResponse }
+
+/** Valida el id y obtiene la identidad (sesión y/o token de gestión). */
+async function leerEntrada(request: NextRequest, ctx: Contexto): Promise<Entrada> {
+    const id = citaIdSchema.safeParse((await ctx.params).id)
+    if (!id.success) {
+        return { ok: false, response: errorJson(400, "Datos inválidos", { id: id.error.issues.map((i) => i.message) }) }
+    }
+    const token = request.nextUrl.searchParams.get("token") || null
+    const session = await getSession()
+    if (!session && !token) return { ok: false, response: errorJson(401, "No autenticado") }
+    return { ok: true, id: id.data, identidad: { usuarioId: session?.user.id ?? null, token } }
+}
+
+// GET /api/appointments/[id] — obtener cita (paciente, token de gestión, doctor o secretario)
+export async function GET(request: NextRequest, ctx: Contexto) {
     try {
-        const { id } = await params
-        const { searchParams } = new URL(request.url)
-        const token = searchParams.get("token")
+        const entrada = await leerEntrada(request, ctx)
+        if (!entrada.ok) return entrada.response
 
-        const session = await getSession()
-
-        // Debe tener sesión o token de gestión
-        if (!session && !token) {
-            return NextResponse.json(
-                { message: "No autenticado" },
-                { status: 401 }
-            )
-        }
-
-        const [citaData] = await db
-            .select()
-            .from(cita)
-            .where(eq(cita.id, id))
-            .limit(1)
-
-        if (!citaData) {
-            return NextResponse.json(
-                { message: "Cita no encontrada" },
-                { status: 404 }
-            )
-        }
-
-        // Verificar acceso — sesión propia o token válido
-        const tieneAcceso =
-            (session && citaData.pacienteId === session.user.id) ||
-            (token && citaData.tokenGestion === token)
-
-        if (!tieneAcceso) {
-            return NextResponse.json(
-                { message: "No autorizado" },
-                { status: 403 }
-            )
-        }
-
-        return NextResponse.json({ cita: citaData })
+        const resultado = await obtenerCita(entrada.id, entrada.identidad)
+        if (!resultado.ok) return errorJson(404, "Cita no encontrada")
+        return NextResponse.json({ cita: citaParaRol(resultado.cita, resultado.rol) })
     } catch (error) {
         console.error(error)
-        return NextResponse.json(
-            { message: "Error al obtener cita" },
-            { status: 500 }
-        )
+        return errorJson(500, "Error al obtener cita")
     }
 }
 
-// PATCH /api/appointments/[id] — editar o cancelar cita
-export async function PATCH(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+// PATCH /api/appointments/[id] — el paciente cancela o edita el motivo; el personal cambia estado y notas
+export async function PATCH(request: NextRequest, ctx: Contexto) {
     try {
-        const { id } = await params
-        const { searchParams } = new URL(request.url)
-        const token = searchParams.get("token")
-        const session = await getSession()
+        const entrada = await leerEntrada(request, ctx)
+        if (!entrada.ok) return entrada.response
 
-        if (!session && !token) {
-            return NextResponse.json(
-                { message: "No autenticado" },
-                { status: 401 }
-            )
+        const cuerpo = await leerCuerpo(request, actualizarCitaSchema)
+        if (!cuerpo.ok) return cuerpo.response
+
+        const resultado = await actualizarCita(entrada.id, cuerpo.data, entrada.identidad)
+        if (!resultado.ok) {
+            const [status, message] = RESPUESTAS_ERROR[resultado.error]
+            return errorJson(status, message)
         }
-
-        const [citaData] = await db
-            .select()
-            .from(cita)
-            .where(eq(cita.id, id))
-            .limit(1)
-
-        if (!citaData) {
-            return NextResponse.json(
-                { message: "Cita no encontrada" },
-                { status: 404 }
-            )
-        }
-
-        // Verificar acceso
-        const tieneAcceso =
-            (session && citaData.pacienteId === session.user.id) ||
-            (token && citaData.tokenGestion === token)
-
-        if (!tieneAcceso) {
-            return NextResponse.json(
-                { message: "No autorizado" },
-                { status: 403 }
-            )
-        }
-
-        // No se puede modificar una cita cancelada o completada
-        if (citaData.estado === "cancelada" || citaData.estado === "completada") {
-            return NextResponse.json(
-                { message: `No se puede modificar una cita ${citaData.estado}` },
-                { status: 400 }
-            )
-        }
-
-        const body = await request.json()
-        const { estado, motivoConsulta, notas } = body
-
-        const [citaActualizada] = await db
-            .update(cita)
-            .set({
-                ...(estado && { estado }),
-                ...(motivoConsulta && { motivoConsulta }),
-                ...(notas && { notas }),
-                actualizadoEn: new Date(),
-            })
-            .where(eq(cita.id, id))
-            .returning()
-
-        return NextResponse.json({ cita: citaActualizada })
+        return NextResponse.json({ cita: citaParaRol(resultado.cita, resultado.rol) })
     } catch (error) {
         console.error(error)
-        return NextResponse.json(
-            { message: "Error al actualizar cita" },
-            { status: 500 }
-        )
+        return errorJson(500, "Error al actualizar cita")
     }
 }
 
 // DELETE /api/appointments/[id] — cancelar cita
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: NextRequest, ctx: Contexto) {
     try {
-        const { id } = await params
-        const { searchParams } = new URL(request.url)
-        const token = searchParams.get("token")
-        const session = await getSession()
+        const entrada = await leerEntrada(request, ctx)
+        if (!entrada.ok) return entrada.response
 
-        if (!session && !token) {
-            return NextResponse.json(
-                { message: "No autenticado" },
-                { status: 401 }
-            )
+        const resultado = await cancelarCita(entrada.id, entrada.identidad)
+        if (!resultado.ok) {
+            const [status, message] = RESPUESTAS_ERROR[resultado.error]
+            return errorJson(status, message)
         }
-
-        const [citaData] = await db
-            .select()
-            .from(cita)
-            .where(eq(cita.id, id))
-            .limit(1)
-
-        if (!citaData) {
-            return NextResponse.json(
-                { message: "Cita no encontrada" },
-                { status: 404 }
-            )
-        }
-
-        // Verificar acceso
-        const tieneAcceso =
-            (session && citaData.pacienteId === session.user.id) ||
-            (token && citaData.tokenGestion === token)
-
-        if (!tieneAcceso) {
-            return NextResponse.json(
-                { message: "No autorizado" },
-                { status: 403 }
-            )
-        }
-
-        if (citaData.estado === "cancelada") {
-            return NextResponse.json(
-                { message: "La cita ya está cancelada" },
-                { status: 400 }
-            )
-        }
-
-        const [citaCancelada] = await db
-            .update(cita)
-            .set({
-                estado: "cancelada",
-                actualizadoEn: new Date(),
-            })
-            .where(eq(cita.id, id))
-            .returning()
-
         return NextResponse.json({
             message: "Cita cancelada correctamente",
-            cita: citaCancelada,
+            cita: citaParaRol(resultado.cita, resultado.rol),
         })
     } catch (error) {
         console.error(error)
-        return NextResponse.json(
-            { message: "Error al cancelar cita" },
-            { status: 500 }
-        )
+        return errorJson(500, "Error al cancelar cita")
     }
 }

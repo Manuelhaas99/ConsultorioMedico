@@ -61,3 +61,37 @@ export const crearCitaSchema = z
     })
 
 export type CrearCitaEntrada = z.output<typeof crearCitaSchema>
+
+export const citaIdSchema = z.uuid({ error: "El identificador de la cita no es válido" })
+
+/** Estados posibles de una cita (los mismos valores que el enum `estado_cita` de la base). */
+export const ESTADOS_CITA = ["pendiente", "confirmada", "cancelada", "completada", "no_show"] as const
+
+/** Texto editable: recorta espacios; "" o `null` lo borran (se guarda `null`). */
+const textoEditable = (max: number, mensaje: string) =>
+    z
+        .string()
+        .trim()
+        .max(max, { error: mensaje })
+        .nullable()
+        .transform((v) => v || null)
+        .optional()
+
+/**
+ * Cuerpo de `PATCH /api/appointments/[id]`. Qué campos puede cambiar cada quien lo
+ * decide la política (`politica.ts`); aquí solo se valida forma y tamaño.
+ */
+export const actualizarCitaSchema = z
+    .strictObject(
+        {
+            estado: z.enum(ESTADOS_CITA, { error: `El estado debe ser uno de: ${ESTADOS_CITA.join(", ")}` }).optional(),
+            motivoConsulta: textoEditable(1000, "El motivo de consulta es demasiado largo"),
+            notas: textoEditable(5000, "Las notas son demasiado largas"),
+        },
+        { error: "Campo no permitido" },
+    )
+    .refine((c) => c.estado !== undefined || c.motivoConsulta !== undefined || c.notas !== undefined, {
+        error: "Indica al menos un campo a modificar: estado, motivoConsulta o notas",
+    })
+
+export type ActualizarCitaEntrada = z.output<typeof actualizarCitaSchema>
