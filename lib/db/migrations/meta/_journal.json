@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1790709364429,
-      "tag": "0000_stormy_morbius",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1791162230744,
-      "tag": "0001_exclusion_citas_traslapadas",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1791162408856,
-      "tag": "0002_indices_y_restricciones",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1791162738893,
-      "tag": "0003_zona_horaria_timestamptz",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1791164012790,
-      "tag": "0004_token_gestion_hash",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1791164579452,
-      "tag": "0005_perfil_doctor_unico_por_usuario",
+      "when": 1791202235148,
+      "tag": "0000_inicial",
       "breakpoints": true
     }
   ]
