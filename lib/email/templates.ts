@@ -27,8 +27,6 @@ export function templateConfirmacionCita({
 }: ConfirmacionCitaProps): string {
     const { fecha, horaInicio, horaFin } = formatearIntervalo(fechaInicio, fechaFin, zona)
 
-    // El token va en el fragmento: no llega al servidor ni a Referer. La página /cita lo
-    // lee en el cliente y llama a /api/appointments/gestion con Authorization: Bearer.
     const linkGestion = tokenGestion ? construirUrl(baseUrl, "/cita", {}, { token: tokenGestion }) : null
 
     return html`
@@ -65,10 +63,7 @@ export function templateConfirmacionCita({
 type RecordatorioCitaProps = Omit<ConfirmacionCitaProps, "tokenGestion"> & {
     tiempoRestante: "24h" | "1h"
     citaId: string
-    /**
-     * La cita es de un invitado sin cuenta. Como la base solo guarda el hash de su
-     * token, el recordatorio no puede incluir el enlace de gestión.
-     */
+    /** Sin enlace de gestión: la base solo guarda el hash del token. */
     invitado: boolean
 }
 

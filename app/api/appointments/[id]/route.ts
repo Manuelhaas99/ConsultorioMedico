@@ -6,9 +6,6 @@ import { actualizarCita, cancelarCita, obtenerCita, type AccesoCita } from "@/li
 import { errorJson, leerCuerpo } from "@/lib/http"
 import { RESPUESTAS_ERROR_ACTUALIZAR } from "../respuestas"
 
-// Gestión de una cita por id con sesión (paciente, doctor dueño o secretario).
-// Los invitados usan /api/appointments/gestion con su token en Authorization.
-
 type Contexto = RouteContext<"/api/appointments/[id]">
 
 type Entrada = { ok: true; acceso: AccesoCita } | { ok: false; response: NextResponse }

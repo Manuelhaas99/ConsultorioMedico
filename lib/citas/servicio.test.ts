@@ -110,7 +110,6 @@ describe("crearCita", () => {
                 fechaInicio: cdmx(9),
                 fechaFin: cdmx(9, 30),
                 estado: "pendiente",
-                // Con sesión no se genera token: el paciente gestiona su cita con su cuenta.
                 tokenGestionHash: null,
             }),
         )
@@ -125,7 +124,6 @@ describe("crearCita", () => {
         expect(repositorio.insertarCita).toHaveBeenCalledWith(
             expect.objectContaining({ pacienteId: null, invitadoNombre: "Luis", invitadoEmail: "luis@example.com" }),
         )
-        // El invitado recibe el token en claro una sola vez; la base guarda solo su SHA-256.
         if (!r.ok) throw new Error("se esperaba ok")
         expect(r.tokenGestion).toMatch(/^[A-Za-z0-9_-]{43}$/)
         const insertado = vi.mocked(repositorio.insertarCita).mock.calls[0]?.[0]

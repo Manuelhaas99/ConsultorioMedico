@@ -82,7 +82,7 @@ export type ResultadoCrearCita =
           cita: CitaRegistrada
           doctor: { nombre: string }
           contacto: Contacto
-          /** Token en claro para el invitado (solo se conoce aquí; la base guarda su hash). `null` con sesión. */
+          /** Solo se conoce aquí: la base guarda su hash. `null` con sesión. */
           tokenGestion: string | null
       }
     | { ok: false; error: ErrorCrearCita }

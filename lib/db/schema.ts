@@ -178,8 +178,6 @@ export const cita = pgTable("cita", {
     motivoConsulta: text("motivo_consulta"),
     notas: text("notas"),
     googleCalendarEventId: text("google_calendar_event_id"),
-    // SHA-256 (hex) del token con el que un invitado gestiona su cita sin cuenta.
-    // El token en claro nunca se guarda (ver lib/citas/token.ts).
     tokenGestionHash: text("token_gestion_hash").unique(),
     recordatorio24hEnviado: boolean("recordatorio_24h_enviado").default(false).notNull(),
     recordatorio1hEnviado: boolean("recordatorio_1h_enviado").default(false).notNull(),
