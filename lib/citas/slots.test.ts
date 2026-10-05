@@ -3,7 +3,7 @@ import { generarSlots, MAX_SLOTS, ventanaDeFranjas, type CitaAgendada, type Inte
 
 const fecha = "2026-10-12"
 
-/** Misma construcción horaria que `generarSlots` (hora local del proceso). */
+// Construye las horas igual que generarSlots, en la zona del proceso.
 function hora(h: number, m = 0): Date {
     const d = new Date(fecha)
     d.setHours(h, m, 0, 0)

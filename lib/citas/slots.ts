@@ -1,14 +1,11 @@
-// Cálculo puro de slots de agenda (sin I/O). Ver pruebas en slots.test.ts.
-//
-// Nota: por ahora conserva el manejo horario histórico (`new Date(fecha)` + `setHours`
-// en la zona del proceso). La corrección de zona horaria se hace por separado (C6).
+// Usa a propósito la zona horaria del proceso, como el código original; pasar a la
+// zona del consultorio es un cambio aparte.
 
 import type { diaSemanaEnum } from "@/lib/db/schema"
 import { ocupaHorario, seTraslapan, type EstadoCita, type Intervalo } from "./intervalos"
 
 export type DiaSemana = (typeof diaSemanaEnum.enumValues)[number]
 
-/** Índices de `Date#getDay` (0 = domingo) a nombre de día del esquema. */
 const DIAS_SEMANA = [
     "domingo",
     "lunes",
@@ -19,16 +16,12 @@ const DIAS_SEMANA = [
     "sabado",
 ] as const satisfies readonly DiaSemana[]
 
-/**
- * Tope de seguridad de slots generados por llamada. Con la duración mínima (5 min)
- * un día completo produce 288 slots; el tope evita que un dato inesperado
- * (franjas repetidas, duración mal validada) haga crecer el ciclo sin control.
- */
+// Un día completo con la duración mínima da 288 slots; el tope protege de datos
+// inesperados como franjas repetidas.
 export const MAX_SLOTS = 1000
 
 export type { Intervalo }
 
-/** Cita existente tal como la necesita el cálculo de slots. */
 export type CitaAgendada = Intervalo & { estado: EstadoCita }
 
 /** Franja de disponibilidad semanal, con horas "HH:MM" o "HH:MM:SS". */
@@ -37,14 +30,12 @@ export type Franja = { horaInicio: string; horaFin: string }
 export type Slot = { inicio: string; fin: string; disponible: boolean }
 
 export type ParametrosSlots = {
-    /** Fecha YYYY-MM-DD ya validada. */
+    /** YYYY-MM-DD */
     fecha: string
-    /** Duración de cada slot en minutos (entero positivo). */
     duracionMinutos: number
     franjas: readonly Franja[]
-    /** Bloqueos de horario del doctor (vacaciones, comida...). */
     bloqueos: readonly Intervalo[]
-    /** Citas del doctor; las canceladas no ocupan el horario. */
+    /** Las canceladas no ocupan el horario. */
     citas: readonly CitaAgendada[]
 }
 
@@ -52,10 +43,6 @@ export function diaSemanaDeFecha(fecha: string): DiaSemana | undefined {
     return DIAS_SEMANA[new Date(fecha).getDay()]
 }
 
-/**
- * Intervalo que cubren las franjas en `fecha`, o `null` si no hay franjas.
- * Sirve para consultar solo los bloqueos y citas que pueden afectar los slots.
- */
 export function ventanaDeFranjas(fecha: string, franjas: readonly Franja[]): Intervalo | null {
     if (franjas.length === 0) return null
     const inicios = franjas.map((f) => aHoraDelDia(fecha, f.horaInicio).getTime())
@@ -70,13 +57,7 @@ function aHoraDelDia(fecha: string, hora: string): Date {
     return d
 }
 
-/**
- * Genera los slots consecutivos de `duracionMinutos` dentro de cada franja.
- * Un slot no está disponible si traslapa (intervalos semiabiertos) un bloqueo o
- * una cita que ocupa horario, aunque la cita empiece antes o termine después del slot.
- * Lanza `RangeError` si la duración no es un entero positivo: con 0, negativos o
- * fracciones de milisegundo el ciclo no avanzaría.
- */
+/** Lanza `RangeError` si la duración no es un entero positivo, con la que el ciclo no avanzaría. */
 export function generarSlots({ fecha, duracionMinutos, franjas, bloqueos, citas }: ParametrosSlots): Slot[] {
     if (!Number.isInteger(duracionMinutos) || duracionMinutos <= 0) {
         throw new RangeError(`Duración de slot inválida: ${duracionMinutos}`)
