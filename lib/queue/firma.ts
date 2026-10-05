@@ -17,11 +17,7 @@ function getReceiver(): Receiver {
 
 export type ResultadoFirma = { ok: true; cuerpo: string } | { ok: false }
 
-/**
- * Verifica la cabecera `Upstash-Signature` contra el cuerpo crudo de la petición.
- * Consume el cuerpo: si la firma es válida lo devuelve como texto para que el
- * handler lo parsee. Las llaves se leen al verificar, no al importar.
- */
+/** Consume el cuerpo de la petición; si la firma es válida lo devuelve como texto. */
 export async function verificarFirmaQstash(request: Request): Promise<ResultadoFirma> {
     const firma = request.headers.get("upstash-signature")
     if (!firma) return { ok: false }
@@ -34,7 +30,6 @@ export async function verificarFirmaQstash(request: Request): Promise<ResultadoF
         })
         return valida ? { ok: true, cuerpo } : { ok: false }
     } catch (error) {
-        // El Receiver lanza SignatureError ante una firma inválida o expirada.
         if (error instanceof SignatureError) return { ok: false }
         throw error
     }

@@ -28,7 +28,6 @@ export async function doctorPorCedula(cedula: string): Promise<{ id: string } | 
     return fila
 }
 
-/** Inserta la solicitud siempre como no aprobada; el rol del usuario no cambia. */
 export async function insertarDoctor(valores: NuevoDoctor): Promise<FilaDoctor> {
     const [fila] = await db
         .insert(doctor)
@@ -38,11 +37,7 @@ export async function insertarDoctor(valores: NuevoDoctor): Promise<FilaDoctor> 
     return fila
 }
 
-/**
- * Aprueba al doctor y ajusta el rol de su usuario en una sola transacción, con
- * la fila del usuario bloqueada para que un cambio de rol simultáneo no se pierda.
- * Devuelve `undefined` si el doctor no existe. Es idempotente.
- */
+/** La fila del usuario se bloquea para que un cambio de rol simultáneo no se pierda. Idempotente. */
 export async function aprobarDoctorYAsignarRol(doctorId: string): Promise<{ doctor: FilaDoctor; rol: Rol } | undefined> {
     return db.transaction(async (tx) => {
         const [aprobado] = await tx.update(doctor).set({ aprobado: true }).where(eq(doctor.id, doctorId)).returning()
@@ -76,10 +71,7 @@ const columnasDirectorio = {
 
 export type FiltrosDirectorio = { especialidadId?: string; ciudad?: string }
 
-/**
- * Doctores aprobados, opcionalmente de una especialidad y con algún consultorio
- * en `ciudad` (comparación sin distinguir mayúsculas ni espacios en los extremos).
- */
+/** `ciudad` se compara sin distinguir mayúsculas ni espacios en los extremos. */
 export async function doctoresAprobados({ especialidadId, ciudad }: FiltrosDirectorio): Promise<FilaDoctorDirectorio[]> {
     const condiciones: SQL[] = [eq(doctor.aprobado, true)]
     if (especialidadId) condiciones.push(eq(doctor.especialidadId, especialidadId))
@@ -97,11 +89,6 @@ export async function doctoresAprobados({ especialidadId, ciudad }: FiltrosDirec
         .orderBy(asc(usuario.name))
 }
 
-/**
- * Lo necesario para decidir cómo ve al doctor `usuarioId` (o un anónimo si es
- * `null`): si está aprobado, si es su dueño y si es uno de sus secretarios.
- * `undefined` si el doctor no existe.
- */
 export async function relacionConDoctor(
     doctorId: string,
     usuarioId: string | null,
@@ -121,7 +108,6 @@ export async function relacionConDoctor(
     return fila
 }
 
-/** Doctor con su usuario, especialidad, consultorios, disponibilidad y tipos de consulta. */
 export async function filasPerfil(doctorId: string): Promise<FilasPerfil | undefined> {
     const [fila] = await db
         .select(columnasDirectorio)
@@ -144,7 +130,6 @@ export async function disponibilidadDe(doctorId: string): Promise<(typeof dispon
     return db.select().from(disponibilidadDoctor).where(eq(disponibilidadDoctor.doctorId, doctorId))
 }
 
-/** Bloqueos del doctor, ordenados por inicio; con `terminanDespuesDe`, solo los que no han terminado. */
 export async function bloqueosDe(
     doctorId: string,
     terminanDespuesDe?: Date,

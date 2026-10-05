@@ -2,7 +2,6 @@ import "server-only"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
-/** Cuerpo estándar de error de la API. */
 export type ErrorApi = {
     message: string
     errores?: Record<string, string[]>
@@ -47,10 +46,7 @@ export function leerQuery<S extends z.ZodType>(request: Request, schema: S): Res
     return aResultado(schema.safeParse(params))
 }
 
-/**
- * Credencial de `Authorization: Bearer <valor>`, o `null` si no viene.
- * Solo extrae el valor; quien lo usa debe validarlo con su esquema.
- */
+/** No valida el valor: quien lo usa debe hacerlo con su esquema. */
 export function tokenBearer(request: Request): string | null {
     const cabecera = request.headers.get("authorization")
     const coincidencia = cabecera?.match(/^Bearer[ ]+(\S+)[ ]*$/i)

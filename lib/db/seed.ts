@@ -19,7 +19,6 @@ async function seed() {
             .onConflictDoNothing()
         console.log("Especialidades insertadas")
     } finally {
-        // Cierra el Pool para que el proceso termine sin process.exit.
         await getPool().end()
     }
 }

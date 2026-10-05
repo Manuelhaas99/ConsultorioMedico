@@ -36,7 +36,6 @@ export async function GET(request: NextRequest) {
     }
 }
 
-/** Traducción de los errores de negocio de `crearCita` a HTTP. */
 const RESPUESTAS_ERROR = {
     RANGO_INVALIDO: [400, "La fecha de fin debe ser posterior a la de inicio"],
     FECHA_EN_PASADO: [400, "La cita debe ser en una fecha y hora futura"],
@@ -56,7 +55,6 @@ export async function POST(request: NextRequest) {
     if (!cuerpo.ok) return cuerpo.response
 
     try {
-        // Obtener sesión si existe (usuario registrado); sin sesión se reserva como invitado.
         const session = await getSession()
         const usuario = session
             ? { id: session.user.id, name: session.user.name, email: session.user.email }
