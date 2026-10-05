@@ -1,8 +1,26 @@
-import { auth } from "@/lib/auth/index";
-import { headers } from "next/headers";
-import { db } from "@/lib/db/client";
-import { usuario } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import "server-only"
+import { headers } from "next/headers"
+import { auth } from "@/lib/auth/index"
+import { rolDeUsuario } from "./repositorio"
+import { tieneRol, type Rol } from "./roles"
+
+export type { Rol } from "./roles"
+
+/** No hay sesión válida. El handler lo traduce a 401. */
+export class NoAutenticadoError extends Error {
+    constructor() {
+        super("No autenticado")
+        this.name = "NoAutenticadoError"
+    }
+}
+
+/** Hay sesión, pero el usuario no tiene el rol requerido. El handler lo traduce a 403. */
+export class NoAutorizadoError extends Error {
+    constructor() {
+        super("No autorizado")
+        this.name = "NoAutorizadoError"
+    }
+}
 
 export async function getSession() {
     return auth.api.getSession({
@@ -10,30 +28,26 @@ export async function getSession() {
     })
 }
 
-export async function getUserRole(){
+/** Rol del usuario con sesión (leído de la base, no de la cookie), o `null` sin sesión. */
+export async function getUserRole(): Promise<Rol | null> {
     const session = await getSession()
-    if(!session) return null
-
-    const user = await db
-        .select({ rol: usuario.rol })
-        .from(usuario)
-        .where(eq(usuario.id, session.user.id))
-        .limit(1)
-
-    return user[0]?.rol ?? null
+    if (!session) return null
+    return rolDeUsuario(session.user.id)
 }
 
-export async function requiereAuth(){
+export async function requiereAuth() {
     const session = await getSession()
-    if(!session) throw new Error("No autenticado")
+    if (!session) throw new NoAutenticadoError()
     return session
 }
 
-export async function requeireRole(
-    rol: "paciente" | "médico" | "secretario" | "admin"
-){
+/**
+ * Exige sesión y que el usuario tenga alguno de los roles `permitidos`.
+ * Lanza `NoAutenticadoError` o `NoAutorizadoError`.
+ */
+export async function requireRol(permitidos: Rol | readonly Rol[]) {
     const session = await requiereAuth()
-    const userRol = await getUserRole()
-    if(userRol !== rol) throw new Error("No autorizado")
-    return session
+    const rol = await rolDeUsuario(session.user.id)
+    if (!tieneRol(rol, permitidos)) throw new NoAutorizadoError()
+    return { session, rol }
 }

@@ -63,8 +63,10 @@ export const usuario = pgTable("usuario", {
 // ── Doctor ─────────────────────────────────────────
 export const doctor = pgTable("doctor", {
     id: uuid("id").primaryKey().defaultRandom(),
+    // Un usuario tiene a lo más un perfil de doctor (el índice UNIQUE también sirve las búsquedas por usuario).
     usuarioId: text("usuario_id")
         .notNull()
+        .unique()
         .references(() => usuario.id, { onDelete: "cascade" }),
     especialidadId: uuid("especialidad_id")
         .notNull()
@@ -75,9 +77,7 @@ export const doctor = pgTable("doctor", {
     googleCalendarId: text("google_calendar_id"),
     googleRefreshToken: text("google_refresh_token"),
     creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow().notNull(),
-}, (t) => [
-    index("doctor_usuario_id_idx").on(t.usuarioId),
-])
+})
 
 // ── Ubicacion (consultorio) ────────────────────────
 export const ubicacion = pgTable("ubicacion", {
