@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { doctorIdSchema, slotsQuerySchema } from "./schemas"
+import { crearCitaSchema, doctorIdSchema, slotsQuerySchema } from "./schemas"
 
 describe("slotsQuerySchema", () => {
     it("usa 30 minutos por defecto", () => {
@@ -30,5 +30,56 @@ describe("doctorIdSchema", () => {
     it("acepta un uuid y rechaza otros textos", () => {
         expect(doctorIdSchema.safeParse("6f1c1a52-3b8e-4f4e-9f3a-2d6c1b0e9a11").success).toBe(true)
         expect(doctorIdSchema.safeParse("123").success).toBe(false)
+    })
+})
+
+describe("crearCitaSchema", () => {
+    const valido = {
+        doctorId: "6f1c1a52-3b8e-4f4e-9f3a-2d6c1b0e9a11",
+        fechaInicio: "2026-10-12T09:00:00-06:00",
+        fechaFin: "2026-10-12T09:30:00-06:00",
+    }
+
+    it("convierte las fechas con zona a instantes", () => {
+        const r = crearCitaSchema.parse(valido)
+        expect(r.fechaInicio.toISOString()).toBe("2026-10-12T15:00:00.000Z")
+        expect(r.fechaFin.toISOString()).toBe("2026-10-12T15:30:00.000Z")
+    })
+
+    it("acepta fechas en UTC (Z)", () => {
+        expect(crearCitaSchema.safeParse({ ...valido, fechaInicio: "2026-10-12T15:00:00Z", fechaFin: "2026-10-12T15:30:00.000Z" }).success).toBe(true)
+    })
+
+    it.each(["no-es-fecha", "2026-02-30T09:00:00Z", "2026-10-12", "2026-10-12T09:00:00", "", 1760281200000])(
+        "rechaza fechaInicio=%s (inválida o sin zona) con 400 en lugar de 500",
+        (fechaInicio) => {
+            const r = crearCitaSchema.safeParse({ ...valido, fechaInicio })
+            expect(r.success).toBe(false)
+            if (!r.success) expect(r.error.issues[0]?.path).toEqual(["fechaInicio"])
+        },
+    )
+
+    it("rechaza fin antes o igual que inicio", () => {
+        const r = crearCitaSchema.safeParse({ ...valido, fechaFin: "2026-10-12T08:00:00-06:00" })
+        expect(r.success).toBe(false)
+        if (!r.success) expect(r.error.issues[0]?.path).toEqual(["fechaFin"])
+        expect(crearCitaSchema.safeParse({ ...valido, fechaFin: valido.fechaInicio }).success).toBe(false)
+    })
+
+    it.each([
+        ["doctorId", "123"],
+        ["ubicacionId", "x"],
+        ["tipoConsultaId", "x"],
+        ["invitadoEmail", "no-es-correo"],
+        ["invitadoNombre", "a".repeat(121)],
+    ])("rechaza %s inválido", (campo, valor) => {
+        expect(crearCitaSchema.safeParse({ ...valido, [campo]: valor }).success).toBe(false)
+    })
+
+    it("acepta null en ubicación y tipo de consulta y normaliza textos vacíos", () => {
+        const r = crearCitaSchema.parse({ ...valido, ubicacionId: null, tipoConsultaId: null, invitadoNombre: "  ", motivoConsulta: " Limpieza " })
+        expect(r.ubicacionId).toBeNull()
+        expect(r.invitadoNombre).toBeUndefined()
+        expect(r.motivoConsulta).toBe("Limpieza")
     })
 })

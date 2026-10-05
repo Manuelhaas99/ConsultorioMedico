@@ -1,13 +1,50 @@
 import "server-only"
 import { and, eq, gt, lt, notInArray } from "drizzle-orm"
 import { db } from "@/lib/db/client"
-import { bloqueoHorario, cita, disponibilidadDoctor } from "@/lib/db/schema"
+import { bloqueoHorario, cita, disponibilidadDoctor, doctor, tipoConsulta, ubicacion, usuario } from "@/lib/db/schema"
 import { ESTADOS_QUE_LIBERAN_HORARIO, type Intervalo } from "./intervalos"
-import type { CitaAgendada, DiaSemana, Franja } from "./slots"
+import type { FranjaConUbicacion } from "./reglas"
+import type { CitaAgendada, DiaSemana } from "./slots"
 
-export async function franjasDelDia(doctorId: string, diaSemana: DiaSemana): Promise<Franja[]> {
+/** Doctor aprobado con los datos que necesita una reserva, o `undefined` si no existe o no está aprobado. */
+export async function doctorReservable(doctorId: string): Promise<{ id: string; nombre: string } | undefined> {
+    const [fila] = await db
+        .select({ id: doctor.id, nombre: usuario.name })
+        .from(doctor)
+        .innerJoin(usuario, eq(doctor.usuarioId, usuario.id))
+        .where(and(eq(doctor.id, doctorId), eq(doctor.aprobado, true)))
+        .limit(1)
+    return fila
+}
+
+export async function ubicacionDelDoctor(ubicacionId: string, doctorId: string): Promise<boolean> {
+    const [fila] = await db
+        .select({ id: ubicacion.id })
+        .from(ubicacion)
+        .where(and(eq(ubicacion.id, ubicacionId), eq(ubicacion.doctorId, doctorId)))
+        .limit(1)
+    return fila !== undefined
+}
+
+export async function tipoConsultaDelDoctor(
+    tipoConsultaId: string,
+    doctorId: string,
+): Promise<{ duracionMinutos: number } | undefined> {
+    const [fila] = await db
+        .select({ duracionMinutos: tipoConsulta.duracionMinutos })
+        .from(tipoConsulta)
+        .where(and(eq(tipoConsulta.id, tipoConsultaId), eq(tipoConsulta.doctorId, doctorId)))
+        .limit(1)
+    return fila
+}
+
+export async function franjasDelDia(doctorId: string, diaSemana: DiaSemana): Promise<FranjaConUbicacion[]> {
     return db
-        .select({ horaInicio: disponibilidadDoctor.horaInicio, horaFin: disponibilidadDoctor.horaFin })
+        .select({
+            horaInicio: disponibilidadDoctor.horaInicio,
+            horaFin: disponibilidadDoctor.horaFin,
+            ubicacionId: disponibilidadDoctor.ubicacionId,
+        })
         .from(disponibilidadDoctor)
         .where(and(eq(disponibilidadDoctor.doctorId, doctorId), eq(disponibilidadDoctor.diaSemana, diaSemana)))
 }
