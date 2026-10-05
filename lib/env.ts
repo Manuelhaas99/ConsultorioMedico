@@ -27,6 +27,8 @@ const esquemas = {
         DATABASE_URL: texto,
         DATABASE_SSL: texto.optional(),
         DATABASE_CA_CERT: texto.optional(),
+        /** Conexiones máximas del Pool por instancia (ver lib/db/pool.ts). */
+        DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).optional(),
     }),
     auth: z
         .object({
