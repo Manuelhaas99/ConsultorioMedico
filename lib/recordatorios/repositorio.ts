@@ -18,10 +18,7 @@ export type DatosRecordatorio = EstadoRecordatorioCita & {
     invitado: boolean
 }
 
-/**
- * Cita con lo necesario para el recordatorio. El destinatario sale de la base:
- * el correo de la cuenta del paciente o, si reservó como invitado, el que dio.
- */
+/** El destinatario es el correo de la cuenta del paciente o, si es invitado, el que dio al reservar. */
 export async function datosParaRecordatorio(citaId: string): Promise<DatosRecordatorio | undefined> {
     const [fila] = await db
         .select({
@@ -73,10 +70,8 @@ function valorEnviado(tipo: TipoRecordatorio, enviado: boolean) {
 }
 
 /**
- * Marca el recordatorio como enviado solo si aún no lo estaba, la cita sigue
- * activa y su horario es el esperado (UPDATE condicional atómico). Devuelve
- * `true` si esta petición "ganó" el envío; `false` si otra ya lo hizo o la cita
- * cambió entre la lectura y la escritura.
+ * UPDATE condicional atómico: `true` solo si esta petición ganó el envío (no se
+ * había enviado, la cita sigue activa y conserva el horario esperado).
  */
 export async function reservarEnvio(citaId: string, tipo: TipoRecordatorio, fechaInicio: Date): Promise<boolean> {
     const filas = await db
@@ -94,7 +89,7 @@ export async function reservarEnvio(citaId: string, tipo: TipoRecordatorio, fech
     return filas.length > 0
 }
 
-/** Revierte `reservarEnvio` cuando el correo no se pudo enviar, para que el reintento lo intente de nuevo. */
+/** Permite que el reintento de QStash vuelva a enviarlo. */
 export async function liberarEnvio(citaId: string, tipo: TipoRecordatorio): Promise<void> {
     await db.update(cita).set(valorEnviado(tipo, false)).where(eq(cita.id, citaId))
 }

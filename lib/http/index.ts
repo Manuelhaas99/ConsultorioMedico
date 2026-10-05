@@ -26,10 +26,7 @@ export async function leerCuerpo<S extends z.ZodType>(request: Request, schema: 
     return leerJson(await request.text(), schema)
 }
 
-/**
- * Parsea y valida un cuerpo JSON ya leído como texto (p. ej. un webhook cuya
- * firma se verificó sobre el cuerpo crudo). Devuelve 400 si no es JSON o no cumple el esquema.
- */
+/** Para webhooks cuya firma se verifica sobre el cuerpo crudo. */
 export function leerJson<S extends z.ZodType>(texto: string, schema: S): Resultado<z.output<S>> {
     let json: unknown
     try {

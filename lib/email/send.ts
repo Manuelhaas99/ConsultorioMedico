@@ -4,7 +4,7 @@ import { asuntoConfirmacion, asuntoRecordatorio, templateConfirmacionCita, templ
 
 const FROM = "Citas Médicas <onboarding@resend.dev>"
 
-/** Resend rechazó el envío (Resend no lanza: devuelve `{ error }`). */
+/** Resend no lanza: devuelve `{ error }`. */
 export class EnvioCorreoError extends Error {
     constructor(mensaje: string) {
         super(mensaje)
@@ -70,7 +70,7 @@ export async function enviarRecordatorioCita({
     invitado: boolean
     tiempoRestante: "24h" | "1h"
     citaId: string
-    /** Misma clave = mismo correo: Resend no lo reenvía si un reintento repite la petición. */
+    /** Resend no reenvía un correo con una clave ya usada. */
     idempotencyKey: string
 }): Promise<{ id: string }> {
     const { data, error } = await getResend().emails.send({
