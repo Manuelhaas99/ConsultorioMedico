@@ -57,10 +57,9 @@ export type CrearCitaEntrada = z.output<typeof crearCitaSchema>
 
 export const citaIdSchema = z.uuid({ error: "El identificador de la cita no es válido" })
 
-/** Estados posibles de una cita (los mismos valores que el enum `estado_cita` de la base). */
 export const ESTADOS_CITA = ["pendiente", "confirmada", "cancelada", "completada", "no_show"] as const
 
-/** Texto editable: recorta espacios; "" o `null` lo borran (se guarda `null`). */
+/** "" o `null` borran el valor. */
 const textoEditable = (max: number, mensaje: string) =>
     z
         .string()
@@ -70,10 +69,7 @@ const textoEditable = (max: number, mensaje: string) =>
         .transform((v) => v || null)
         .optional()
 
-/**
- * Cuerpo de `PATCH /api/appointments/[id]`. Qué campos puede cambiar cada quien lo
- * decide la política (`politica.ts`); aquí solo se valida forma y tamaño.
- */
+/** Solo valida forma y tamaño; qué campos puede cambiar cada rol lo decide la política. */
 export const actualizarCitaSchema = z
     .strictObject(
         {

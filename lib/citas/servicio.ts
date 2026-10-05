@@ -152,18 +152,11 @@ function contactoDeReserva(entrada: CrearCitaEntrada, usuario: ContextoCrearCita
     return null
 }
 
-/**
- * Quién pide acceso a una cita: usuario con sesión y/o token de gestión.
- * Al menos uno debe venir (el handler responde 401 si faltan ambos).
- */
 export type IdentidadCita = { usuarioId: string | null; token: string | null }
 
 type CitaConRol = { cita: CitaRegistrada; rol: RolEnCita }
 
-/**
- * Carga la cita y la relación de quien pide con ella. Devuelve `null` tanto si
- * no existe como si no tiene acceso, para no revelar qué identificadores existen.
- */
+/** Devuelve `null` también sin acceso, para no revelar qué identificadores existen. */
 async function citaConAcceso(id: string, identidad: IdentidadCita): Promise<CitaConRol | null> {
     const fila = await citaPorId(id)
     if (!fila) return null
@@ -178,7 +171,6 @@ async function citaConAcceso(id: string, identidad: IdentidadCita): Promise<Cita
 
 export type ResultadoObtenerCita = ({ ok: true } & CitaConRol) | { ok: false; error: "NO_ENCONTRADA" }
 
-/** Cita visible para el paciente (sesión o token), el doctor dueño o sus secretarios. */
 export async function obtenerCita(id: string, identidad: IdentidadCita): Promise<ResultadoObtenerCita> {
     const acceso = await citaConAcceso(id, identidad)
     return acceso ? { ok: true, ...acceso } : { ok: false, error: "NO_ENCONTRADA" }
@@ -187,15 +179,11 @@ export async function obtenerCita(id: string, identidad: IdentidadCita): Promise
 export type ErrorActualizarCita =
     | "NO_ENCONTRADA"
     | Exclude<ErrorEdicion, "NO_AUTORIZADO">
-    /** La cita cambió de estado entre la lectura y la escritura. */
     | "CONFLICTO"
 
 export type ResultadoActualizarCita = ({ ok: true } & CitaConRol) | { ok: false; error: ErrorActualizarCita }
 
-/**
- * Aplica `cambios` si la política lo permite al rol de quien pide (ver `politica.ts`).
- * La escritura es condicional al estado leído para no pisar un cambio concurrente.
- */
+/** La escritura es condicional al estado leído para no pisar un cambio concurrente. */
 export async function actualizarCita(
     id: string,
     cambios: CambiosCita,
@@ -214,7 +202,6 @@ export async function actualizarCita(
     return { ok: true, cita: actualizada, rol: acceso.rol }
 }
 
-/** Cancela la cita con las mismas reglas que `actualizarCita({ estado: "cancelada" })`. */
 export function cancelarCita(id: string, identidad: IdentidadCita, ahora: Date = new Date()) {
     return actualizarCita(id, { estado: "cancelada" }, identidad, ahora)
 }

@@ -90,7 +90,6 @@ export async function citaPorId(id: string): Promise<CitaRegistrada | undefined>
     return fila
 }
 
-/** Indica si el usuario es el doctor `doctorId` o uno de sus secretarios. */
 export async function esPersonalDelDoctor(usuarioId: string, doctorId: string): Promise<boolean> {
     const [fila] = await db
         .select({ id: doctor.id })
@@ -110,10 +109,7 @@ export async function esPersonalDelDoctor(usuarioId: string, doctorId: string): 
 
 export type CambiosAplicables = Partial<Pick<NuevaCita, "estado" | "motivoConsulta" | "notas">>
 
-/**
- * Aplica `cambios` solo si la cita sigue en `estadoEsperado` (control optimista):
- * si otra petición cambió el estado entre la lectura y la escritura, devuelve `undefined`.
- */
+/** Control optimista: devuelve `undefined` si la cita ya no está en `estadoEsperado`. */
 export async function actualizarCitaSiEstado(
     id: string,
     estadoEsperado: EstadoCita,
