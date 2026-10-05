@@ -43,3 +43,16 @@ export async function citasQueTraslapan(doctorId: string, rango: Intervalo): Pro
             ),
         )
 }
+
+export type NuevaCita = typeof cita.$inferInsert
+export type CitaRegistrada = typeof cita.$inferSelect
+
+/**
+ * Inserta la cita. Puede lanzar la violación de `cita_sin_traslape_por_doctor`
+ * si otra petición reservó un horario traslapado al mismo tiempo.
+ */
+export async function insertarCita(valores: NuevaCita): Promise<CitaRegistrada> {
+    const [nueva] = await db.insert(cita).values(valores).returning()
+    if (!nueva) throw new Error("La inserción de la cita no devolvió filas")
+    return nueva
+}
