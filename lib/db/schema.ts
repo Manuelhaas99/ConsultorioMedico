@@ -63,7 +63,7 @@ export const usuario = pgTable("usuario", {
 // ── Doctor ─────────────────────────────────────────
 export const doctor = pgTable("doctor", {
     id: uuid("id").primaryKey().defaultRandom(),
-    // Un usuario tiene a lo más un perfil de doctor (el índice UNIQUE también sirve las búsquedas por usuario).
+    // El índice UNIQUE también sirve las búsquedas por usuario.
     usuarioId: text("usuario_id")
         .notNull()
         .unique()

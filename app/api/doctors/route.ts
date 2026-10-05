@@ -46,8 +46,6 @@ const RESPUESTAS_ERROR_REGISTRO = {
     ESPECIALIDAD_INVALIDA: [400, "La especialidad no existe"],
 } as const satisfies Record<ErrorRegistrarDoctor, readonly [number, string]>
 
-// POST /api/doctors — solicitud de registro como doctor; queda pendiente de aprobación
-// y el usuario conserva su rol hasta que un admin la apruebe (PATCH /api/doctors/[id]/aprobacion).
 export async function POST(request: NextRequest) {
     try {
         const session = await getSession()

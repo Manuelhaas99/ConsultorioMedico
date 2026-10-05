@@ -7,7 +7,6 @@ import { aprobarDoctorYAsignarRol, doctorDeUsuario, doctorPorCedula, insertarDoc
 import type { RegistrarDoctorEntrada } from "./schemas"
 import type { Rol } from "@/lib/auth/roles"
 
-/** Identidad de quien hace la petición (usuario con sesión). */
 export type Actor = { usuarioId: string }
 
 export type ErrorRegistrarDoctor = "ROL_NO_PERMITIDO" | ConflictoDoctor
@@ -15,11 +14,9 @@ export type ErrorRegistrarDoctor = "ROL_NO_PERMITIDO" | ConflictoDoctor
 export type ResultadoRegistrarDoctor = { ok: true; doctor: DoctorPropioDto } | { ok: false; error: ErrorRegistrarDoctor }
 
 /**
- * Registra la solicitud del usuario para atender como doctor. Queda pendiente
- * de aprobación y el usuario conserva su rol hasta que un admin la apruebe.
- * Las restricciones UNIQUE de la base garantizan un solo perfil por usuario y
- * por cédula aun con peticiones simultáneas; las consultas previas solo dan
- * una respuesta más clara.
+ * El usuario conserva su rol hasta que un admin apruebe la solicitud. Las restricciones
+ * UNIQUE garantizan un perfil por usuario y por cédula aun con peticiones simultáneas;
+ * las consultas previas solo dan una respuesta más clara.
  */
 export async function registrarDoctor(entrada: RegistrarDoctorEntrada, actor: Actor): Promise<ResultadoRegistrarDoctor> {
     const rol = await rolDeUsuario(actor.usuarioId)
@@ -50,7 +47,6 @@ export type ResultadoAprobarDoctor =
     | { ok: true; doctor: DoctorPropioDto; rolUsuario: Rol }
     | { ok: false; error: ErrorAprobarDoctor }
 
-/** Un admin aprueba al doctor; su usuario pasa a rol `medico` en la misma transacción. */
 export async function aprobarDoctor(doctorId: string, actor: Actor): Promise<ResultadoAprobarDoctor> {
     const rol = await rolDeUsuario(actor.usuarioId)
     if (!puedeAprobarDoctores(rol)) return { ok: false, error: "NO_AUTORIZADO" }

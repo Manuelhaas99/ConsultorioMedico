@@ -55,7 +55,6 @@ describe("índices y restricciones", () => {
         expect(columnasDeIndice(tabla, indice)).toEqual(columnas)
     })
 
-    // A3: un usuario no puede tener dos perfiles de doctor; el UNIQUE también indexa usuario_id.
     it("doctor.usuario_id es único", () => {
         const unicas = configDe("doctor").columns.filter((c) => c.isUnique).map((c) => c.uniqueName)
         expect(unicas).toContain("doctor_usuario_id_unique")
