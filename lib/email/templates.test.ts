@@ -30,7 +30,7 @@ describe("correos de citas en la zona del consultorio", () => {
     })
 })
 
-describe("correos sin inyección de HTML (A1)", () => {
+describe("correos sin inyección de HTML", () => {
     const malicioso = '<a href="https://evil.example">Haz clic</a>'
     const props = {
         ...base,
@@ -73,7 +73,7 @@ describe("correos sin inyección de HTML (A1)", () => {
     })
 })
 
-describe("enlaces de gestión sin exponer el token (A2)", () => {
+describe("enlaces de gestión sin exponer el token", () => {
     const props = { ...base, baseUrl: "https://citas.example" }
 
     it("la confirmación del invitado lleva el token en el fragmento, no en la query", () => {
