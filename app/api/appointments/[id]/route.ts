@@ -13,7 +13,6 @@ import { errorJson, leerCuerpo } from "@/lib/http"
 
 type Contexto = RouteContext<"/api/appointments/[id]">
 
-/** Traducción de los errores de negocio de actualizar/cancelar a HTTP. */
 const RESPUESTAS_ERROR = {
     NO_ENCONTRADA: [404, "Cita no encontrada"],
     CAMBIO_NO_PERMITIDO: [403, "No tienes permiso para hacer ese cambio en la cita"],
@@ -24,7 +23,6 @@ const RESPUESTAS_ERROR = {
 
 type Entrada = { ok: true; id: string; identidad: IdentidadCita } | { ok: false; response: NextResponse }
 
-/** Valida el id y obtiene la identidad (sesión y/o token de gestión). */
 async function leerEntrada(request: NextRequest, ctx: Contexto): Promise<Entrada> {
     const id = citaIdSchema.safeParse((await ctx.params).id)
     if (!id.success) {
@@ -36,7 +34,6 @@ async function leerEntrada(request: NextRequest, ctx: Contexto): Promise<Entrada
     return { ok: true, id: id.data, identidad: { usuarioId: session?.user.id ?? null, token } }
 }
 
-// GET /api/appointments/[id] — obtener cita (paciente, token de gestión, doctor o secretario)
 export async function GET(request: NextRequest, ctx: Contexto) {
     try {
         const entrada = await leerEntrada(request, ctx)
@@ -51,7 +48,6 @@ export async function GET(request: NextRequest, ctx: Contexto) {
     }
 }
 
-// PATCH /api/appointments/[id] — el paciente cancela o edita el motivo; el personal cambia estado y notas
 export async function PATCH(request: NextRequest, ctx: Contexto) {
     try {
         const entrada = await leerEntrada(request, ctx)

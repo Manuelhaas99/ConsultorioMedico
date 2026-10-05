@@ -8,16 +8,13 @@ import {
     type ParametrosSlots,
 } from "./slots"
 
-const fecha = "2026-10-12" // lunes
+const fecha = "2026-10-12"
 const zona = "America/Mexico_City"
 
-/** `generarSlots` en la zona del consultorio de prueba. */
 const generarSlots = (p: Omit<ParametrosSlots, "zona">) => generarSlotsEnZona({ zona, ...p })
 
-/**
- * Instante de `fecha` a las h:m en Ciudad de México (UTC−6, sin horario de verano
- * desde 2022). Se construye en UTC para no depender de la zona del proceso.
- */
+// Ciudad de México es UTC−6 sin horario de verano desde 2022; se construye en UTC
+// para no depender de la zona del proceso.
 function hora(h: number, m = 0): Date {
     return new Date(Date.UTC(2026, 9, 12, h + 6, m))
 }
@@ -72,7 +69,6 @@ describe("generarSlots", () => {
     })
 
     it("una cita que solo traslapa parcialmente ocupa todos los slots que toca", () => {
-        // 09:15–10:15 toca 09:00, 09:30 y 10:00.
         const citas: CitaAgendada[] = [{ inicio: hora(9, 15), fin: hora(10, 15), estado: "confirmada" }]
         const slots = generarSlots({ fecha, duracionMinutos: 30, franjas: manana, bloqueos: [], citas })
         expect(slots.map((s) => s.disponible)).toEqual([false, false, false, true])

@@ -22,10 +22,6 @@ import type { CrearCitaEntrada, SlotsQuery } from "./schemas"
 import { diaSemanaDeFecha, generarSlots, ventanaDeFranjas, type Slot } from "./slots"
 import { ZONA_CONSULTORIO } from "./zona-horaria"
 
-/**
- * Slots del doctor en una fecha (calendario del consultorio), marcando como no
- * disponibles los bloqueados u ocupados.
- */
 export async function obtenerSlots(
     doctorId: string,
     { fecha, duracion }: SlotsQuery,
@@ -46,7 +42,6 @@ export async function obtenerSlots(
     return generarSlots({ fecha, zona, duracionMinutos: duracion, franjas, bloqueos, citas })
 }
 
-/** Indica si el doctor tiene libre `intervalo`, es decir, sin citas activas que lo traslapen. */
 export async function horarioLibre(doctorId: string, intervalo: Intervalo): Promise<boolean> {
     const citas = await citasQueTraslapan(doctorId, intervalo)
     return !chocaConCitas(intervalo, citas)
@@ -54,12 +49,8 @@ export async function horarioLibre(doctorId: string, intervalo: Intervalo): Prom
 
 export type ResultadoReserva = { ok: true; cita: CitaRegistrada } | { ok: false; error: "HORARIO_OCUPADO" }
 
-/**
- * Registra la cita si el horario está libre. La verificación previa da una
- * respuesta rápida, pero la garantía ante peticiones simultáneas es la
- * restricción de exclusión de la base: si otra reserva gana la carrera, la
- * inserción falla con 23P01 y se reporta como HORARIO_OCUPADO.
- */
+// La verificación previa solo responde rápido; ante reservas simultáneas la garantía
+// es la restricción de exclusión, cuya violación también se reporta como HORARIO_OCUPADO.
 export async function reservarCita(valores: NuevaCita): Promise<ResultadoReserva> {
     const libre = await horarioLibre(valores.doctorId, { inicio: valores.fechaInicio, fin: valores.fechaFin })
     if (!libre) return { ok: false, error: "HORARIO_OCUPADO" }
@@ -72,7 +63,6 @@ export async function reservarCita(valores: NuevaCita): Promise<ResultadoReserva
     }
 }
 
-/** Motivos de negocio por los que no se crea una cita. El handler los traduce a HTTP. */
 export type ErrorCrearCita =
     | "RANGO_INVALIDO"
     | "FECHA_EN_PASADO"
@@ -89,25 +79,16 @@ export type ResultadoCrearCita =
     | { ok: true; cita: CitaRegistrada; doctor: { nombre: string }; contacto: Contacto }
     | { ok: false; error: ErrorCrearCita }
 
-/** A quién se notifica la cita (paciente con cuenta o invitado). */
+/** A quién se notifica la cita. */
 export type Contacto = { nombre: string; email: string }
 
-/** Quién reserva: un usuario con sesión o, si es `null`, un invitado. */
 export type ContextoCrearCita = {
+    /** `null`: reserva como invitado. */
     usuario: { id: string; name: string; email: string } | null
-    /** Reloj inyectable para pruebas. */
     ahora?: Date
-    /** Zona del consultorio en la que se interpreta la disponibilidad. */
     zona?: string
 }
 
-/**
- * Crea una cita validando las reglas de negocio:
- * inicio futuro y anterior al fin; doctor aprobado; ubicación y tipo de consulta del
- * mismo doctor; duración igual a la del tipo (o entre los límites si no hay tipo);
- * intervalo completo dentro de la disponibilidad del doctor en la zona del consultorio;
- * sin traslapar bloqueos ni citas activas.
- */
 export async function crearCita(
     entrada: CrearCitaEntrada,
     { usuario, ahora = new Date(), zona = ZONA_CONSULTORIO }: ContextoCrearCita,
@@ -171,18 +152,11 @@ function contactoDeReserva(entrada: CrearCitaEntrada, usuario: ContextoCrearCita
     return null
 }
 
-/**
- * Quién pide acceso a una cita: usuario con sesión y/o token de gestión.
- * Al menos uno debe venir (el handler responde 401 si faltan ambos).
- */
 export type IdentidadCita = { usuarioId: string | null; token: string | null }
 
 type CitaConRol = { cita: CitaRegistrada; rol: RolEnCita }
 
-/**
- * Carga la cita y la relación de quien pide con ella. Devuelve `null` tanto si
- * no existe como si no tiene acceso, para no revelar qué identificadores existen.
- */
+/** Devuelve `null` también sin acceso, para no revelar qué identificadores existen. */
 async function citaConAcceso(id: string, identidad: IdentidadCita): Promise<CitaConRol | null> {
     const fila = await citaPorId(id)
     if (!fila) return null
@@ -197,7 +171,6 @@ async function citaConAcceso(id: string, identidad: IdentidadCita): Promise<Cita
 
 export type ResultadoObtenerCita = ({ ok: true } & CitaConRol) | { ok: false; error: "NO_ENCONTRADA" }
 
-/** Cita visible para el paciente (sesión o token), el doctor dueño o sus secretarios. */
 export async function obtenerCita(id: string, identidad: IdentidadCita): Promise<ResultadoObtenerCita> {
     const acceso = await citaConAcceso(id, identidad)
     return acceso ? { ok: true, ...acceso } : { ok: false, error: "NO_ENCONTRADA" }
@@ -206,15 +179,11 @@ export async function obtenerCita(id: string, identidad: IdentidadCita): Promise
 export type ErrorActualizarCita =
     | "NO_ENCONTRADA"
     | Exclude<ErrorEdicion, "NO_AUTORIZADO">
-    /** La cita cambió de estado entre la lectura y la escritura. */
     | "CONFLICTO"
 
 export type ResultadoActualizarCita = ({ ok: true } & CitaConRol) | { ok: false; error: ErrorActualizarCita }
 
-/**
- * Aplica `cambios` si la política lo permite al rol de quien pide (ver `politica.ts`).
- * La escritura es condicional al estado leído para no pisar un cambio concurrente.
- */
+/** La escritura es condicional al estado leído para no pisar un cambio concurrente. */
 export async function actualizarCita(
     id: string,
     cambios: CambiosCita,
@@ -233,7 +202,6 @@ export async function actualizarCita(
     return { ok: true, cita: actualizada, rol: acceso.rol }
 }
 
-/** Cancela la cita con las mismas reglas que `actualizarCita({ estado: "cancelada" })`. */
 export function cancelarCita(id: string, identidad: IdentidadCita, ahora: Date = new Date()) {
     return actualizarCita(id, { estado: "cancelada" }, identidad, ahora)
 }

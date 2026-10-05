@@ -1,22 +1,13 @@
-// Conversión pura entre hora local de un consultorio e instantes (sin I/O).
-//
-// El servidor corre en UTC (Vercel), pero la disponibilidad semanal se captura en
-// hora local del consultorio. Nada aquí depende de la zona del proceso: todo usa
-// `Intl.DateTimeFormat` con `timeZone` explícito y aritmética UTC. Se usa Intl y no
-// `Temporal` porque Node 22 (CI y producción) aún no trae `Temporal` sin bandera.
+// Se usa Intl y no `Temporal` porque Node 22 (CI y producción) aún no trae
+// `Temporal` sin bandera.
 
 import type { diaSemanaEnum } from "@/lib/db/schema"
 
 export type DiaSemana = (typeof diaSemanaEnum.enumValues)[number]
 
-/**
- * Zona horaria de los consultorios. Hoy todos están en el centro de México; si
- * algún día hay sucursales en otra zona, se vuelve una columna de `ubicacion` y
- * se pasa explícitamente a estas funciones (todas reciben la zona como argumento).
- */
 export const ZONA_CONSULTORIO = "America/Mexico_City"
 
-/** Índices de `getUTCDay` (0 = domingo) a nombre de día del esquema. */
+// En el orden de `getUTCDay`.
 const DIAS_SEMANA = [
     "domingo",
     "lunes",
@@ -74,32 +65,26 @@ export function desplazamientoMs(instante: Date, zona: string): number {
     return comoUtc - (instante.getTime() - instante.getUTCMilliseconds())
 }
 
-/** Separa "YYYY-MM-DD" en números. Supone una fecha ya validada (zod `iso.date`). */
 function partesDeFecha(fecha: string): [anio: number, mes: number, dia: number] {
     const [anio, mes, dia] = fecha.split("-").map(Number)
     return [anio, mes, dia]
 }
 
-/** Día de la semana de una fecha de calendario "YYYY-MM-DD", sin depender de la zona del proceso. */
 export function diaSemanaDeFecha(fecha: string): DiaSemana | undefined {
     const [anio, mes, dia] = partesDeFecha(fecha)
     return DIAS_SEMANA[new Date(Date.UTC(anio, mes - 1, dia)).getUTCDay()]
 }
 
-/** Fecha de calendario "YYYY-MM-DD" que marca el reloj de `zona` en `instante`. */
+/** "YYYY-MM-DD" que marca el reloj de `zona` en `instante`. */
 export function fechaLocal(instante: Date, zona: string): string {
     const p = partesLocales(instante, zona)
     return `${String(p.anio).padStart(4, "0")}-${String(p.mes).padStart(2, "0")}-${String(p.dia).padStart(2, "0")}`
 }
 
 /**
- * Instante en que el reloj de `zona` marca `hora` ("HH:MM" o "HH:MM:SS") en `fecha`
- * ("YYYY-MM-DD"). "24:00" es la medianoche del día siguiente.
- *
- * Con cambios de horario se comporta como `Temporal` con `disambiguation: "compatible"`:
- * - hora repetida (se atrasa el reloj): la primera ocurrencia;
- * - hora inexistente (se adelanta el reloj): se recorre hacia adelante el tamaño del salto
- *   (02:30 en un salto de 02:00 a 03:00 → 03:30).
+ * "24:00" es la medianoche del día siguiente. En cambios de horario se comporta como
+ * `Temporal` con `disambiguation: "compatible"`: una hora repetida toma la primera
+ * ocurrencia y una inexistente se recorre hacia adelante el tamaño del salto.
  */
 export function aInstante(fecha: string, hora: string, zona: string): Date {
     const [anio, mes, dia] = partesDeFecha(fecha)
@@ -119,10 +104,8 @@ export function aInstante(fecha: string, hora: string, zona: string): Date {
     return new Date(candidatos[0] ?? relojComoUtc - antes)
 }
 
-/** Fecha y horas de una cita listas para mostrarse (correos, UI) en la zona del consultorio. */
 export type FechaFormateada = { fecha: string; horaInicio: string; horaFin: string }
 
-/** Formatea un intervalo en español de México y en `zona`, sin depender de la zona del proceso. */
 export function formatearIntervalo(inicio: Date, fin: Date, zona: string): FechaFormateada {
     const fecha = new Intl.DateTimeFormat("es-MX", {
         timeZone: zona,

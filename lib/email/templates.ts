@@ -12,7 +12,6 @@ type ConfirmacionCitaProps = {
     fechaFin: Date
     direccion?: string
     tokenGestion?: string
-    /** Zona IANA del consultorio; el servidor corre en UTC, así que se formatea explícitamente. */
     zona?: string
     /** URL pública de la app para los enlaces. Por defecto `BETTER_AUTH_URL`. */
     baseUrl?: string
