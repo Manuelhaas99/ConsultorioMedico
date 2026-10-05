@@ -30,7 +30,7 @@ describe("correos de citas en la zona del consultorio", () => {
     })
 })
 
-describe("correos sin inyección de HTML (A1)", () => {
+describe("correos sin inyección de HTML", () => {
     const malicioso = '<a href="https://evil.example">Haz clic</a>'
     const props = {
         ...base,
