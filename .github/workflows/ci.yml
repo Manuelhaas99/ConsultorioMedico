@@ -27,8 +27,6 @@ jobs:
       # La imagen oficial no habilita SSL y, por defecto, el cliente exige TLS verificado.
       DATABASE_URL: postgres://ci:ci@localhost:5432/ci?sslmode=disable
       DATABASE_SSL: disable
-      # El build no necesita secretos: las integraciones (base de datos, auth,
-      # Resend, QStash) se inicializan y validan al primer uso (lib/env.ts).
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

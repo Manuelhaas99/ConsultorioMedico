@@ -8,11 +8,6 @@ export type Db = NodePgDatabase
 
 let instancia: Db | null = null
 
-/**
- * Cliente de Drizzle, creado al primer uso. Valida DATABASE_URL y la
- * configuración TLS en ese momento, no al importar el módulo, para que
- * `next build` no necesite la base de datos.
- */
 export function getDb(): Db {
     if (!instancia) {
         const { connectionString, ssl } = configuracionConexion(env("baseDatos"))
@@ -21,11 +16,7 @@ export function getDb(): Db {
     return instancia
 }
 
-/**
- * Acceso perezoso a `getDb()` con la misma forma que el cliente de Drizzle,
- * para que los repositorios sigan usando `db.select()...`. La conexión se
- * resuelve en el primer acceso a una propiedad.
- */
+/** Conecta en el primer acceso a una propiedad, para que importar `db` no requiera la base de datos. */
 export const db: Db = new Proxy({} as Db, {
     get(_objetivo, propiedad) {
         const real = getDb()

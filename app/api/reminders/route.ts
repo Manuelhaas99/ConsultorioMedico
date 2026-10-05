@@ -6,8 +6,7 @@ import { enviarRecordatorioCita } from "@/lib/email/send"
 import { verificarFirmaQstash } from "@/lib/queue/firma"
 
 export async function POST(request: NextRequest) {
-    // La firma se verifica dentro del handler (y no con un wrapper al importar)
-    // para que las llaves de QStash se lean en tiempo de ejecución, no en el build.
+    // Dentro del handler para que las llaves de QStash se lean en ejecución, no en el build.
     const firma = await verificarFirmaQstash(request)
     if (!firma.ok) {
         return NextResponse.json({ message: "Firma inválida" }, { status: 403 })
