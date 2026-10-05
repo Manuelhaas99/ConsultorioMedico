@@ -1,17 +1,12 @@
 import "server-only"
 import { z } from "zod"
 
-// Variables de entorno del servidor, validadas con zod en un solo lugar.
-//
-// Cada integración lee SOLO su grupo y lo hace de forma perezosa (al primer uso,
-// no al importar el módulo): así `next build` no necesita secretos y un endpoint
-// que no envía correos no falla porque falte RESEND_API_KEY.
-//
-// Los valores vacíos (`VAR=` en .env) cuentan como ausentes.
+// Agrupadas por integración y leídas al primer uso: así `next build` no necesita
+// secretos y un endpoint sin correo no falla porque falte RESEND_API_KEY.
 
 export type FuenteEntorno = Record<string, string | undefined>
 
-/** Falta una variable o tiene un formato inválido. El mensaje nombra variables, nunca valores. */
+/** El mensaje nombra variables, nunca sus valores. */
 export class ConfiguracionEntornoError extends Error {
     constructor(mensaje: string) {
         super(mensaje)
@@ -27,7 +22,6 @@ const esquemas = {
         DATABASE_URL: texto,
         DATABASE_SSL: texto.optional(),
         DATABASE_CA_CERT: texto.optional(),
-        /** Conexiones máximas del Pool por instancia (ver lib/db/pool.ts). */
         DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).optional(),
     }),
     auth: z
@@ -74,10 +68,6 @@ function sinVacios(fuente: FuenteEntorno): FuenteEntorno {
     return Object.fromEntries(Object.entries(fuente).map(([k, v]) => [k, v?.trim() === "" ? undefined : v]))
 }
 
-/**
- * Valida un grupo de variables contra su esquema (pura, sin caché).
- * Lanza `ConfiguracionEntornoError` con la lista de variables faltantes o inválidas.
- */
 export function leerEntorno<G extends GrupoEntorno>(grupo: G, fuente: FuenteEntorno): Entorno<G> {
     const limpia = sinVacios(fuente)
     const resultado = esquemas[grupo].safeParse(limpia)
@@ -92,7 +82,6 @@ export function leerEntorno<G extends GrupoEntorno>(grupo: G, fuente: FuenteEnto
 
 const cache = new Map<GrupoEntorno, unknown>()
 
-/** Variables del grupo, validadas contra `process.env` la primera vez que se piden. */
 export function env<G extends GrupoEntorno>(grupo: G): Entorno<G> {
     if (!cache.has(grupo)) cache.set(grupo, leerEntorno(grupo, process.env))
     return cache.get(grupo) as Entorno<G>

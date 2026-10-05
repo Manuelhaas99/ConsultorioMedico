@@ -29,7 +29,7 @@ describe("cliente de base de datos", () => {
         vi.stubEnv("DATABASE_URL", "postgres://app:app@localhost:5432/citas")
         vi.stubEnv("DATABASE_SSL", "disable")
         const primera = (await import("./client")).getPool()
-        vi.resetModules() // simula la recarga en caliente: el módulo se evalúa de nuevo
+        vi.resetModules() // simula una recarga en caliente
         const segunda = (await import("./client")).getPool()
         expect(segunda).toBe(primera)
         await primera.end()

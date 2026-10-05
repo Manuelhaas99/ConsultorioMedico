@@ -29,7 +29,6 @@ import {
 import type { ListarDoctoresQuery, RegistrarDoctorEntrada } from "./schemas"
 import type { Rol } from "@/lib/auth/roles"
 
-/** Identidad de quien hace la petición (usuario con sesión). */
 export type Actor = { usuarioId: string }
 
 export type ErrorRegistrarDoctor = "ROL_NO_PERMITIDO" | ConflictoDoctor
@@ -37,11 +36,9 @@ export type ErrorRegistrarDoctor = "ROL_NO_PERMITIDO" | ConflictoDoctor
 export type ResultadoRegistrarDoctor = { ok: true; doctor: DoctorPropioDto } | { ok: false; error: ErrorRegistrarDoctor }
 
 /**
- * Registra la solicitud del usuario para atender como doctor. Queda pendiente
- * de aprobación y el usuario conserva su rol hasta que un admin la apruebe.
- * Las restricciones UNIQUE de la base garantizan un solo perfil por usuario y
- * por cédula aun con peticiones simultáneas; las consultas previas solo dan
- * una respuesta más clara.
+ * El usuario conserva su rol hasta que un admin apruebe la solicitud. Las restricciones
+ * UNIQUE garantizan un perfil por usuario y por cédula aun con peticiones simultáneas;
+ * las consultas previas solo dan una respuesta más clara.
  */
 export async function registrarDoctor(entrada: RegistrarDoctorEntrada, actor: Actor): Promise<ResultadoRegistrarDoctor> {
     const rol = await rolDeUsuario(actor.usuarioId)
@@ -72,7 +69,6 @@ export type ResultadoAprobarDoctor =
     | { ok: true; doctor: DoctorPropioDto; rolUsuario: Rol }
     | { ok: false; error: ErrorAprobarDoctor }
 
-/** Un admin aprueba al doctor; su usuario pasa a rol `medico` en la misma transacción. */
 export async function aprobarDoctor(doctorId: string, actor: Actor): Promise<ResultadoAprobarDoctor> {
     const rol = await rolDeUsuario(actor.usuarioId)
     if (!puedeAprobarDoctores(rol)) return { ok: false, error: "NO_AUTORIZADO" }
@@ -82,16 +78,11 @@ export async function aprobarDoctor(doctorId: string, actor: Actor): Promise<Res
     return { ok: true, doctor: doctorPropio(resultado.doctor), rolUsuario: resultado.rol }
 }
 
-/** Directorio público: solo doctores aprobados, sin correos. */
 export async function listarDoctores({ especialidad, ciudad }: ListarDoctoresQuery): Promise<DoctorPublicoDto[]> {
     const filas = await doctoresAprobados({ especialidadId: especialidad, ciudad })
     return filas.map(doctorPublico)
 }
 
-/**
- * Cómo ve `actor` (o un anónimo si es `null`) al doctor, o `null` si no debe
- * verlo: un doctor sin aprobar solo es visible para sí mismo, su personal y los admins.
- */
 async function vistaPara(doctorId: string, actor: Actor | null): Promise<VistaDoctor | null> {
     const usuarioId = actor?.usuarioId ?? null
     const [relacion, rol] = await Promise.all([
@@ -125,10 +116,7 @@ export async function obtenerDisponibilidad(
     return { ok: true, data: (await disponibilidadDe(doctorId)).map(disponibilidadPublica) }
 }
 
-/**
- * Bloqueos del doctor. El doctor y sus secretarios ven todos con su motivo;
- * los demás solo ven los intervalos que aún no terminan, sin motivo.
- */
+/** Quien no es personal del doctor solo ve los bloqueos que aún no terminan. */
 export async function obtenerBloqueos(
     doctorId: string,
     actor: Actor | null,

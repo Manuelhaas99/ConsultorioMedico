@@ -6,7 +6,6 @@ const base = {
     nombrePaciente: "Ana",
     nombreDoctor: "Dra. López",
     especialidad: "Odontología",
-    // 09:00–09:30 en Ciudad de México.
     fechaInicio: new Date("2026-10-12T15:00:00.000Z"),
     fechaFin: new Date("2026-10-12T15:30:00.000Z"),
 }
@@ -16,7 +15,7 @@ afterEach(() => {
     process.env.TZ = tzOriginal
 })
 
-describe("correos de citas en la zona del consultorio (C6)", () => {
+describe("correos de citas en la zona del consultorio", () => {
     it.each(["UTC", "America/Mexico_City", "Asia/Tokyo"])("la confirmación muestra 09:00–09:30 con TZ=%s", (tz) => {
         process.env.TZ = tz
         const html = templateConfirmacionCita(base)

@@ -6,7 +6,6 @@ import { tieneRol, type Rol } from "./roles"
 
 export type { Rol } from "./roles"
 
-/** No hay sesión válida. El handler lo traduce a 401. */
 export class NoAutenticadoError extends Error {
     constructor() {
         super("No autenticado")
@@ -14,7 +13,6 @@ export class NoAutenticadoError extends Error {
     }
 }
 
-/** Hay sesión, pero el usuario no tiene el rol requerido. El handler lo traduce a 403. */
 export class NoAutorizadoError extends Error {
     constructor() {
         super("No autorizado")
@@ -28,7 +26,7 @@ export async function getSession() {
     })
 }
 
-/** Rol del usuario con sesión (leído de la base, no de la cookie), o `null` sin sesión. */
+/** Se lee de la base, no de la cookie. */
 export async function getUserRole(): Promise<Rol | null> {
     const session = await getSession()
     if (!session) return null
@@ -41,10 +39,6 @@ export async function requiereAuth() {
     return session
 }
 
-/**
- * Exige sesión y que el usuario tenga alguno de los roles `permitidos`.
- * Lanza `NoAutenticadoError` o `NoAutorizadoError`.
- */
 export async function requireRol(permitidos: Rol | readonly Rol[]) {
     const session = await requiereAuth()
     const rol = await rolDeUsuario(session.user.id)

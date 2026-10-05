@@ -4,12 +4,9 @@ import { verificarFirmaQstash } from "@/lib/queue/firma"
 import { mensajeRecordatorioSchema } from "@/lib/recordatorios/schemas"
 import { procesarRecordatorio } from "@/lib/recordatorios/servicio"
 
-// POST /api/reminders — webhook de QStash que envía un recordatorio de cita.
-// Responde 2xx cuando el recordatorio se envió o se omitió a propósito (QStash no
-// reintenta) y 500 ante un error inesperado (QStash reintenta).
+// 2xx (enviado u omitido a propósito) evita que QStash reintente; 500 provoca reintento.
 export async function POST(request: Request) {
-    // La firma se verifica dentro del handler (y no con un wrapper al importar)
-    // para que las llaves de QStash se lean en tiempo de ejecución, no en el build.
+    // Dentro del handler para que las llaves de QStash se lean en ejecución, no en el build.
     const firma = await verificarFirmaQstash(request)
     if (!firma.ok) return errorJson(403, "Firma inválida")
 

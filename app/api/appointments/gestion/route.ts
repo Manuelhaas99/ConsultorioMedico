@@ -6,12 +6,7 @@ import { tokenGestionSchema } from "@/lib/citas/token"
 import { errorJson, leerCuerpo, tokenBearer } from "@/lib/http"
 import { RESPUESTAS_ERROR_ACTUALIZAR } from "../respuestas"
 
-// Gestión de la cita de un invitado con su token de gestión.
-// El token viaja en `Authorization: Bearer <token>`, nunca en la URL (quedaría en
-// logs y en Referer). El correo enlaza a /cita#token=...: la página lee el
-// fragmento en el cliente y llama a esta API con la cabecera.
-// Con el token se tiene el rol "paciente" de la política (lib/citas/politica.ts):
-// ver, cancelar y editar el motivo de una cita futura pendiente o confirmada.
+// El token viaja en `Authorization`, nunca en la URL, donde quedaría en logs y en Referer.
 
 type Entrada = { ok: true; acceso: AccesoCita } | { ok: false; response: NextResponse }
 
@@ -25,7 +20,6 @@ function leerToken(request: NextRequest): Entrada {
     return { ok: true, acceso: { token: token.data } }
 }
 
-// GET /api/appointments/gestion — ver la cita
 export async function GET(request: NextRequest) {
     try {
         const entrada = leerToken(request)
@@ -40,7 +34,6 @@ export async function GET(request: NextRequest) {
     }
 }
 
-// PATCH /api/appointments/gestion — cancelar o editar el motivo de consulta
 export async function PATCH(request: NextRequest) {
     try {
         const entrada = leerToken(request)
@@ -61,7 +54,6 @@ export async function PATCH(request: NextRequest) {
     }
 }
 
-// DELETE /api/appointments/gestion — cancelar la cita
 export async function DELETE(request: NextRequest) {
     try {
         const entrada = leerToken(request)

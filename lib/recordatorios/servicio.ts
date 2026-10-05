@@ -9,14 +9,8 @@ export type ResultadoRecordatorio =
     | { enviado: false; motivo: MotivoOmision | "NO_ENCONTRADA" }
 
 /**
- * Procesa un recordatorio entregado por QStash.
- *
- * 1. Omite si la cita no existe, ya no está activa, cambió de horario o ya se avisó.
- * 2. Marca el envío con un UPDATE condicional ANTES de enviar: si QStash entrega
- *    el mismo mensaje dos veces (reintento o entrega duplicada), solo una gana.
- * 3. Si el correo falla, revierte la marca y relanza para que QStash reintente.
- *
- * Errores inesperados (base, Resend) se lanzan; el handler responde 500.
+ * El envío se reserva antes de mandar el correo para que una entrega duplicada de
+ * QStash solo envíe una vez; si el correo falla se libera y se relanza para que QStash reintente.
  */
 export async function procesarRecordatorio(mensaje: MensajeRecordatorio): Promise<ResultadoRecordatorio> {
     const datos = await datosParaRecordatorio(mensaje.citaId)

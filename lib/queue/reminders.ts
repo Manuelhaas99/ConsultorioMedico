@@ -4,10 +4,8 @@ import { claveRecordatorio, recordatoriosPorProgramar } from "@/lib/recordatorio
 import { getQstashClient } from "./client"
 
 /**
- * Programa en QStash los recordatorios de 24 h y 1 h que aún queden en el futuro.
- * El mensaje lleva el horario de la cita: si se reprograma o cancela, el handler
- * lo detecta al entregarse y lo omite (no hace falta cancelar mensajes en QStash).
- * Al reprogramar una cita basta con volver a llamar a esta función.
+ * El mensaje lleva el horario de la cita para que el handler omita los de citas
+ * canceladas o reprogramadas sin cancelar mensajes en QStash. Al reprogramar, basta con volver a llamarla.
  */
 export async function programarRecordatorios({ citaId, fechaInicio }: { citaId: string; fechaInicio: Date }) {
     const qstash = getQstashClient()

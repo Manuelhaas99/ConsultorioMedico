@@ -9,8 +9,6 @@ export type Db = NodePgDatabase
 
 type Conexion = { pool: Pool; db: Db }
 
-// En desarrollo la conexión vive en globalThis para sobrevivir a las recargas en
-// caliente (ver reutilizarEnGlobal); en producción basta la variable del módulo.
 const almacenGlobal = globalThis as typeof globalThis & { __conexionPg?: Conexion }
 let local: Conexion | undefined
 
@@ -34,25 +32,16 @@ function getConexion(): Conexion {
     return local
 }
 
-/**
- * Cliente de Drizzle, creado al primer uso. Valida DATABASE_URL y la
- * configuración TLS en ese momento, no al importar el módulo, para que
- * `next build` no necesite la base de datos.
- */
 export function getDb(): Db {
     return getConexion().db
 }
 
-/** Pool subyacente, para cerrarlo en scripts (`await getPool().end()`). */
+/** Para cerrar la conexión en scripts. */
 export function getPool(): Pool {
     return getConexion().pool
 }
 
-/**
- * Acceso perezoso a `getDb()` con la misma forma que el cliente de Drizzle,
- * para que los repositorios sigan usando `db.select()...`. La conexión se
- * resuelve en el primer acceso a una propiedad.
- */
+/** Conecta en el primer acceso a una propiedad, para que importar `db` no requiera la base de datos. */
 export const db: Db = new Proxy({} as Db, {
     get(_objetivo, propiedad) {
         const real = getDb()

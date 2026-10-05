@@ -25,7 +25,6 @@ function crearAuth() {
         emailAndPassword: {
             enabled: true,
         },
-        // Google es opcional (p. ej. en desarrollo): solo se habilita si hay credenciales.
         socialProviders:
             GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET
                 ? { google: { clientId: GOOGLE_CLIENT_ID, clientSecret: GOOGLE_CLIENT_SECRET } }
@@ -57,10 +56,6 @@ export type Session = Auth["$Infer"]["Session"]
 
 let instancia: Auth | null = null
 
-/**
- * Instancia de better-auth, creada al primer uso (no al importar) para que
- * `next build` no necesite BETTER_AUTH_SECRET ni la base de datos.
- */
 export function getAuth(): Auth {
     if (!instancia) instancia = crearAuth()
     return instancia

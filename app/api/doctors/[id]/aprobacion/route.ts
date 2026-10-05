@@ -9,7 +9,6 @@ const RESPUESTAS_ERROR_APROBAR = {
     NO_ENCONTRADO: [404, "Doctor no encontrado"],
 } as const satisfies Record<ErrorAprobarDoctor, readonly [number, string]>
 
-// PATCH /api/doctors/[id]/aprobacion — (solo admin) aprueba al doctor y asigna rol medico a su usuario
 export async function PATCH(_request: NextRequest, ctx: RouteContext<"/api/doctors/[id]/aprobacion">) {
     try {
         const id = doctorIdSchema.safeParse((await ctx.params).id)
