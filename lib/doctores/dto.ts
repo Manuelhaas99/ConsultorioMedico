@@ -1,17 +1,9 @@
-// Representaciones seguras de un doctor para responder al cliente (puro, sin I/O). Ver dto.test.ts.
-//
-// Nunca incluyen el correo del doctor, su token o calendario de Google ni el id
-// de su usuario en las vistas públicas.
-
 import type { bloqueoHorario, disponibilidadDoctor, doctor, tipoConsulta, ubicacion } from "@/lib/db/schema"
 import type { VistaDoctor } from "./politica"
 
 type FilaDoctor = typeof doctor.$inferSelect
 
-/**
- * Perfil de doctor como lo ve su propio dueño o un admin: sin el token de
- * Google ni el id del calendario.
- */
+/** Para su dueño o un admin: sin el token de Google ni el id del calendario. */
 export type DoctorPropioDto = Pick<FilaDoctor, "id" | "usuarioId" | "especialidadId" | "cedula" | "bio" | "aprobado" | "creadoEn">
 
 export function doctorPropio(d: FilaDoctor): DoctorPropioDto {
@@ -26,14 +18,13 @@ export function doctorPropio(d: FilaDoctor): DoctorPropioDto {
     }
 }
 
-/** Datos de doctor + usuario + especialidad que lee el repositorio para el directorio. */
 export type FilaDoctorDirectorio = Pick<FilaDoctor, "id" | "bio" | "cedula" | "especialidadId" | "aprobado"> & {
     especialidadNombre: string
     nombre: string
     imagen: string | null
 }
 
-/** Doctor en el directorio público: la cédula profesional es pública (registro de la SEP), el correo no. */
+/** La cédula profesional es pública (registro de la SEP); el correo no. */
 export type DoctorPublicoDto = {
     id: string
     nombre: string
@@ -80,7 +71,6 @@ export type PerfilDoctorDto = DoctorPublicoDto & {
     ubicaciones: UbicacionPublicaDto[]
     disponibilidad: DisponibilidadPublicaDto[]
     tiposConsulta: TipoConsultaPublicoDto[]
-    /** Solo para el propio doctor, su personal o un admin (el público solo ve doctores aprobados). */
     aprobado?: boolean
 }
 
@@ -103,10 +93,8 @@ export function perfilDoctor(filas: FilasPerfil, vista: VistaDoctor): PerfilDoct
 
 type FilaBloqueo = typeof bloqueoHorario.$inferSelect
 
-/** Bloqueo como lo ve el público o un admin: solo el intervalo ocupado, sin motivo. */
 export type BloqueoPublicoDto = { fechaInicio: Date; fechaFin: Date }
 
-/** Bloqueo como lo ve el doctor dueño o sus secretarios. */
 export type BloqueoPersonalDto = Pick<FilaBloqueo, "id" | "fechaInicio" | "fechaFin" | "motivo" | "creadoEn">
 
 export function bloqueoPublico(b: Pick<FilaBloqueo, "fechaInicio" | "fechaFin">): BloqueoPublicoDto {

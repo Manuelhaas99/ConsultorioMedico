@@ -9,7 +9,6 @@ jobs:
   verificar:
     runs-on: ubuntu-latest
     services:
-      # Base desechable para comprobar que las migraciones aplican en limpio.
       postgres:
         image: postgres:16
         env:
@@ -25,11 +24,7 @@ jobs:
           --health-retries 10
     env:
       NEXT_TELEMETRY_DISABLED: 1
-      # Apunta al servicio postgres (solo lo usan db:migrate y db:seed). La imagen
-      # oficial no habilita SSL, así que se desactiva TLS de forma explícita:
-      # `sslmode=disable` en la URL lo entienden drizzle-kit (migrate) y
-      # lib/db/ssl.ts (seed); DATABASE_SSL=disable lo deja claro para la app.
-      # Sin esto, lib/db/client.ts exige TLS con certificado verificado.
+      # La imagen oficial no habilita SSL y, por defecto, el cliente exige TLS verificado.
       DATABASE_URL: postgres://ci:ci@localhost:5432/ci?sslmode=disable
       DATABASE_SSL: disable
       # El build no necesita secretos: las integraciones (base de datos, auth,

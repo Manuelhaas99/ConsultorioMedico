@@ -4,8 +4,6 @@ import { doctorIdSchema } from "@/lib/doctores/schemas"
 import { obtenerPerfilDoctor } from "@/lib/doctores/servicio"
 import { errorJson } from "@/lib/http"
 
-// GET /api/doctors/[id] — perfil público del doctor. Un doctor sin aprobar solo
-// lo ven él mismo, su personal y los admins; para los demás no existe (404).
 export async function GET(_request: NextRequest, ctx: RouteContext<"/api/doctors/[id]">) {
     try {
         const id = doctorIdSchema.safeParse((await ctx.params).id)
