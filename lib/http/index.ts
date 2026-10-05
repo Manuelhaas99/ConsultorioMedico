@@ -2,7 +2,6 @@ import "server-only"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
-/** Cuerpo estándar de error de la API. */
 export type ErrorApi = {
     message: string
     errores?: Record<string, string[]>

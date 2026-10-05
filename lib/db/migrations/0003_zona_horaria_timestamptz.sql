@@ -1,15 +1,11 @@
--- C6: todos los instantes pasan a timestamp with time zone.
--- La app siempre escribió instantes en UTC (Drizzle serializa Date con toISOString
--- y lee `timestamp` sin zona como UTC), así que los valores existentes se
--- interpretan explícitamente como UTC con `AT TIME ZONE 'UTC'` en lugar de
--- depender del parámetro TimeZone de la sesión que corre la migración.
--- La restricción de exclusión de 0001 usa tsrange sobre fecha_inicio/fecha_fin:
--- se elimina antes del cambio de tipo y se recrea con tstzrange (mismas reglas:
--- intervalos semiabiertos y solo los estados de ESTADOS_QUE_LIBERAN_HORARIO quedan fuera).
--- En "cita" y "bloqueo_horario" fecha_inicio y fecha_fin cambian en la misma
--- sentencia: si se alteraran por separado, el CHECK fecha_fin > fecha_inicio se
--- evaluaría comparando timestamptz con timestamp (convertido con el TimeZone de
--- la sesión) y fallaría con una sesión al este de UTC (p. ej. Europa o Asia).
+-- La app siempre escribió instantes en UTC (Drizzle serializa Date con toISOString),
+-- así que los valores existentes se interpretan como UTC en lugar de depender del
+-- TimeZone de la sesión que corre la migración.
+-- La restricción de exclusión usa tsrange y bloquea el cambio de tipo: se elimina y
+-- se recrea con tstzrange.
+-- fecha_inicio y fecha_fin cambian en la misma sentencia: por separado, el CHECK
+-- fecha_fin > fecha_inicio compararía timestamptz con timestamp y fallaría en
+-- sesiones al este de UTC.
 ALTER TABLE "cita" DROP CONSTRAINT "cita_sin_traslape_por_doctor";--> statement-breakpoint
 ALTER TABLE "account" ALTER COLUMN "access_token_expires_at" SET DATA TYPE timestamp with time zone USING "access_token_expires_at" AT TIME ZONE 'UTC';--> statement-breakpoint
 ALTER TABLE "account" ALTER COLUMN "refresh_token_expires_at" SET DATA TYPE timestamp with time zone USING "refresh_token_expires_at" AT TIME ZONE 'UTC';--> statement-breakpoint

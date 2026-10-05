@@ -9,7 +9,6 @@ jobs:
   verificar:
     runs-on: ubuntu-latest
     services:
-      # Base desechable para comprobar que las migraciones aplican en limpio.
       postgres:
         image: postgres:16
         env:
@@ -25,9 +24,7 @@ jobs:
           --health-retries 10
     env:
       NEXT_TELEMETRY_DISABLED: 1
-      # Apunta al servicio postgres (solo lo usan db:migrate y db:seed). La imagen oficial no habilita SSL, y
-      # `sslmode=disable` en la URL tiene prioridad sobre la opción `ssl` que
-      # fija lib/db/client.ts, así que el seed también funciona.
+      # La imagen oficial no habilita SSL; `sslmode` en la URL prevalece sobre la opción `ssl` del cliente.
       DATABASE_URL: postgres://ci:ci@localhost:5432/ci?sslmode=disable
       # Valores falsos: el build no debe conectarse a servicios reales.
       BETTER_AUTH_SECRET: ci-secret-no-usar-en-produccion-0123456789

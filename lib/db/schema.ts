@@ -155,10 +155,8 @@ export const secretario = pgTable("secretario", {
 ])
 
 // ── Cita ───────────────────────────────────────────
-// La restricción de exclusión `cita_sin_traslape_por_doctor` (sin citas activas
-// traslapadas por doctor) no se puede expresar en Drizzle: la creó la migración
-// 0001_exclusion_citas_traslapadas.sql y 0003_zona_horaria_timestamptz.sql la
-// recreó con tstzrange al pasar las fechas a timestamp with time zone.
+// La restricción de exclusión `cita_sin_traslape_por_doctor` no se puede expresar
+// en Drizzle; vive en migraciones personalizadas.
 export const cita = pgTable("cita", {
     id: uuid("id").primaryKey().defaultRandom(),
     doctorId: uuid("doctor_id")
@@ -189,12 +187,10 @@ export const cita = pgTable("cita", {
     creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow().notNull(),
     actualizadoEn: timestamp("actualizado_en", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
-    // Agenda del doctor por rango de fechas (slots, verificación de traslape).
     index("cita_doctor_id_fecha_inicio_idx").on(t.doctorId, t.fechaInicio),
     index("cita_paciente_id_idx").on(t.pacienteId),
     check("cita_fechas_validas", sql`${t.fechaFin} > ${t.fechaInicio}`),
     check("cita_token_gestion_hash_formato", sql`${t.tokenGestionHash} ~ '^[0-9a-f]{64}$'`),
-    // Toda cita pertenece a un paciente con cuenta o a un invitado identificable.
     check(
         "cita_paciente_o_invitado",
         // coalesce: con NULL la comparación da NULL y el CHECK lo dejaría pasar.
