@@ -10,12 +10,8 @@ import * as schema from "./schema"
 const exportados: readonly unknown[] = Object.values(schema)
 const tablas = exportados.filter((valor): valor is PgTable => is(valor, PgTable))
 
-/**
- * Postgres rechaza una llave foránea cuyas columnas no tienen el mismo tipo
- * que las referenciadas ("incompatible types uuid and text"), y como la
- * migración corre en una transacción, la base queda vacía. Esta prueba lo
- * detecta sin necesidad de una base de datos.
- */
+// Postgres rechaza una llave foránea con tipos distintos ("incompatible types uuid and text")
+// y, como la migración corre en una transacción, la base queda vacía.
 describe("esquema de base de datos", () => {
     it("tiene tablas que revisar", () => {
         expect(tablas.length).toBeGreaterThan(0)
@@ -34,10 +30,7 @@ describe("esquema de base de datos", () => {
     })
 })
 
-/**
- * Índices y CHECKs que sostienen consultas frecuentes e invariantes de datos (M1).
- * Si alguien los quita del esquema, `drizzle-kit generate` los borraría en silencio.
- */
+// Si alguno desaparece del esquema, `drizzle-kit generate` lo borraría de la base en silencio.
 describe("índices y restricciones", () => {
     const configDe = (nombre: string) => {
         const tabla = tablas.find((t) => getTableConfig(t).name === nombre)
@@ -74,10 +67,7 @@ describe("índices y restricciones", () => {
     })
 })
 
-/**
- * C6: todo instante se guarda como `timestamp with time zone`. Un `timestamp`
- * sin zona depende de la zona de quien escribe y lee (servidor, sesión de Postgres).
- */
+// Un `timestamp` sin zona depende de la zona de quien escribe y lee.
 describe("instantes con zona horaria", () => {
     const columnasTimestamp = tablas.flatMap((tabla) => {
         const { name, columns } = getTableConfig(tabla)
@@ -95,12 +85,8 @@ describe("instantes con zona horaria", () => {
     })
 })
 
-/**
- * 0003 cambia fecha_inicio/fecha_fin a timestamptz. Si se alteran en sentencias
- * separadas, el CHECK `fecha_fin > fecha_inicio` se evalúa entre timestamptz y
- * timestamp (convertido con el TimeZone de la sesión) y la migración falla en
- * sesiones al este de UTC. Ambas columnas deben cambiar en la misma sentencia.
- */
+// Por separado, el CHECK `fecha_fin > fecha_inicio` compararía timestamptz con
+// timestamp y la migración fallaría en sesiones al este de UTC.
 describe("migración 0003 a timestamptz", () => {
     const sentencias = readFileSync(
         fileURLToPath(new URL("./migrations/0003_zona_horaria_timestamptz.sql", import.meta.url)),

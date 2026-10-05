@@ -8,7 +8,6 @@ type ConfirmacionCitaProps = {
     fechaFin: Date
     direccion?: string
     tokenGestion?: string
-    /** Zona IANA del consultorio; el servidor corre en UTC, así que se formatea explícitamente. */
     zona?: string
 }
 
