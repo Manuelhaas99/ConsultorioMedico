@@ -9,8 +9,6 @@ export type Db = NodePgDatabase
 
 type Conexion = { pool: Pool; db: Db }
 
-// En desarrollo la conexión vive en globalThis para sobrevivir a las recargas en
-// caliente (ver reutilizarEnGlobal); en producción basta la variable del módulo.
 const almacenGlobal = globalThis as typeof globalThis & { __conexionPg?: Conexion }
 let local: Conexion | undefined
 
@@ -38,7 +36,7 @@ export function getDb(): Db {
     return getConexion().db
 }
 
-/** Pool subyacente, para cerrarlo en scripts (`await getPool().end()`). */
+/** Para cerrar la conexión en scripts. */
 export function getPool(): Pool {
     return getConexion().pool
 }
