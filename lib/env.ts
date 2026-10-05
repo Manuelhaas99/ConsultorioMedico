@@ -48,6 +48,15 @@ const esquemas = {
     resend: z.object({
         RESEND_API_KEY: texto,
     }),
+    correo: z.object({
+        /** Remitente con dominio verificado en Resend: `Nombre <citas@dominio>` o `citas@dominio`. */
+        EMAIL_FROM: texto
+            .regex(/^(?:[^<>@\r\n]+<[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+>|[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+)$/, {
+                message: 'debe ser "Nombre <correo@dominio>" o "correo@dominio"',
+            })
+            .optional(),
+        NODE_ENV: z.string().optional(),
+    }),
     qstashPublicacion: z.object({
         QSTASH_TOKEN: texto,
         QSTASH_URL: url.optional(),

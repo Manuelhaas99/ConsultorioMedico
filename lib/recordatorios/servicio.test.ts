@@ -27,6 +27,7 @@ const datos: DatosRecordatorio = {
     nombrePaciente: "Ana",
     nombreDoctor: "Dra. López",
     especialidad: "Ortodoncia",
+    direccion: "Consultorio Centro, Av. Juárez 10, CDMX",
     invitado: false,
 }
 const mensaje: MensajeRecordatorio = { citaId: CITA_ID, tipo: "24h", fechaInicio: new Date(inicio) }
@@ -49,6 +50,7 @@ describe("procesarRecordatorio", () => {
             expect.objectContaining({
                 email: "ana@example.com",
                 especialidad: "Ortodoncia",
+                direccion: "Consultorio Centro, Av. Juárez 10, CDMX",
                 tiempoRestante: "24h",
                 idempotencyKey: `recordatorio-${CITA_ID}-24h-${inicio.getTime()}`,
             }),

@@ -3,12 +3,11 @@ import { db } from "@/lib/db/client"
 import { cita } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { getSession } from "@/lib/auth/session"
-import {enviarConfirmacionCita} from "@/lib/email/send";
-import {programarRecordatorios} from "@/lib/queue/reminders";
 import { crearCitaSchema } from "@/lib/citas/schemas"
 import { crearCita, type ErrorCrearCita } from "@/lib/citas/servicio"
 import { errorJson, leerCuerpo } from "@/lib/http"
 import { citaParaPaciente } from "@/lib/citas/dto"
+import { notificarCitaCreada } from "@/lib/citas/notificaciones"
 
 // GET /api/appointments — lista de citas del usuario
 export async function GET(request: NextRequest) {
@@ -66,31 +65,9 @@ export async function POST(request: NextRequest) {
             const [status, message] = RESPUESTAS_ERROR[resultado.error]
             return errorJson(status, message)
         }
-        const { cita: nuevaCita, contacto } = resultado
+        const { cita: nuevaCita } = resultado
 
-        // Enviar email de confirmación
-        try {
-            await enviarConfirmacionCita({
-                email: contacto.email,
-                nombrePaciente: contacto.nombre,
-                nombreDoctor: resultado.doctor.nombre,
-                especialidad: "Odontología",
-                fechaInicio: nuevaCita.fechaInicio,
-                fechaFin: nuevaCita.fechaFin,
-                tokenGestion: resultado.tokenGestion ?? undefined,
-            })
-        } catch (emailError) {
-            console.error("Error enviando email:", emailError)
-            // No fallamos la cita si el email falla
-        }
-
-        // Programar recordatorios
-        try {
-            await programarRecordatorios({ citaId: nuevaCita.id, fechaInicio: nuevaCita.fechaInicio })
-        } catch (qstashError) {
-            console.error("Error programando recordatorios:", qstashError)
-            // No fallamos la cita si QStash falla
-        }
+        await notificarCitaCreada(resultado)
 
         return NextResponse.json(
             {

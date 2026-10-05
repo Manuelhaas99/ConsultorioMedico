@@ -2,7 +2,8 @@ import "server-only"
 import { and, eq, inArray } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { db } from "@/lib/db/client"
-import { cita, doctor, especialidad, usuario } from "@/lib/db/schema"
+import { cita, doctor, especialidad, ubicacion, usuario } from "@/lib/db/schema"
+import { formatearDireccion } from "@/lib/citas/ubicacion"
 import { ESTADOS_CON_RECORDATORIO, type EstadoRecordatorioCita } from "./reglas"
 import type { TipoRecordatorio } from "./schemas"
 
@@ -15,6 +16,8 @@ export type DatosRecordatorio = EstadoRecordatorioCita & {
     nombrePaciente: string
     nombreDoctor: string
     especialidad: string
+    /** Dirección de la ubicación de la cita, si la reserva indica una. */
+    direccion: string | null
     invitado: boolean
 }
 
@@ -38,12 +41,17 @@ export async function datosParaRecordatorio(citaId: string): Promise<DatosRecord
             invitadoEmail: cita.invitadoEmail,
             nombreDoctor: medico.name,
             especialidad: especialidad.nombre,
+            ubicacionNombre: ubicacion.nombre,
+            ubicacionDireccion: ubicacion.direccion,
+            ubicacionColonia: ubicacion.colonia,
+            ubicacionCiudad: ubicacion.ciudad,
         })
         .from(cita)
         .innerJoin(doctor, eq(cita.doctorId, doctor.id))
         .innerJoin(medico, eq(doctor.usuarioId, medico.id))
         .innerJoin(especialidad, eq(doctor.especialidadId, especialidad.id))
         .leftJoin(paciente, eq(cita.pacienteId, paciente.id))
+        .leftJoin(ubicacion, eq(cita.ubicacionId, ubicacion.id))
         .where(eq(cita.id, citaId))
         .limit(1)
     if (!fila) return undefined
@@ -60,6 +68,15 @@ export async function datosParaRecordatorio(citaId: string): Promise<DatosRecord
         nombrePaciente: (invitado ? fila.invitadoNombre : fila.pacienteNombre) ?? "Paciente",
         nombreDoctor: fila.nombreDoctor,
         especialidad: fila.especialidad,
+        direccion:
+            fila.ubicacionDireccion !== null && fila.ubicacionCiudad !== null
+                ? formatearDireccion({
+                      nombre: fila.ubicacionNombre ?? "",
+                      direccion: fila.ubicacionDireccion,
+                      colonia: fila.ubicacionColonia,
+                      ciudad: fila.ubicacionCiudad,
+                  })
+                : null,
         invitado,
     }
 }

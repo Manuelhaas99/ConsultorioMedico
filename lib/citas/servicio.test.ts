@@ -80,10 +80,11 @@ describe("crearCita", () => {
     const contexto = { usuario, ahora, zona: "America/Mexico_City" }
     const entrada: CrearCitaEntrada = { doctorId, fechaInicio: cdmx(9), fechaFin: cdmx(9, 30) }
     const fila = { id: "c1" } as CitaRegistrada
+    const ubicacionConsultorio = { nombre: "Consultorio Centro", direccion: "Av. Juárez 10", colonia: "Centro", ciudad: "CDMX" }
 
     beforeEach(() => {
-        vi.mocked(repositorio.doctorReservable).mockReset().mockResolvedValue({ id: doctorId, nombre: "Dra. López" })
-        vi.mocked(repositorio.ubicacionDelDoctor).mockReset().mockResolvedValue(true)
+        vi.mocked(repositorio.doctorReservable).mockReset().mockResolvedValue({ id: doctorId, nombre: "Dra. López", especialidad: "Ortodoncia" })
+        vi.mocked(repositorio.ubicacionDelDoctor).mockReset().mockResolvedValue(ubicacionConsultorio)
         vi.mocked(repositorio.tipoConsultaDelDoctor).mockReset().mockResolvedValue({ duracionMinutos: 30 })
         vi.mocked(repositorio.franjasDelDia)
             .mockReset()
@@ -97,7 +98,8 @@ describe("crearCita", () => {
         await expect(crearCita(entrada, contexto)).resolves.toEqual({
             ok: true,
             cita: fila,
-            doctor: { nombre: "Dra. López" },
+            doctor: { nombre: "Dra. López", especialidad: "Ortodoncia" },
+            ubicacion: null,
             contacto: { nombre: "Ana", email: "ana@example.com" },
             tokenGestion: null,
         })
@@ -143,7 +145,7 @@ describe("crearCita", () => {
             "FECHA_EN_PASADO",
         ],
         ["doctor inexistente o no aprobado", () => vi.mocked(repositorio.doctorReservable).mockResolvedValue(undefined), entrada, "DOCTOR_NO_ENCONTRADO"],
-        ["ubicación de otro doctor", () => vi.mocked(repositorio.ubicacionDelDoctor).mockResolvedValue(false), { ...entrada, ubicacionId }, "UBICACION_INVALIDA"],
+        ["ubicación de otro doctor", () => vi.mocked(repositorio.ubicacionDelDoctor).mockResolvedValue(undefined), { ...entrada, ubicacionId }, "UBICACION_INVALIDA"],
         [
             "tipo de consulta de otro doctor",
             () => vi.mocked(repositorio.tipoConsultaDelDoctor).mockResolvedValue(undefined),
@@ -217,6 +219,8 @@ describe("crearCita", () => {
         vi.mocked(repositorio.franjasDelDia).mockResolvedValue([{ horaInicio: "09:00", horaFin: "11:00", ubicacionId }])
         const r = await crearCita({ ...entrada, ubicacionId, tipoConsultaId }, contexto)
         expect(r.ok).toBe(true)
+        // La especialidad y la ubicación reales viajan al correo de confirmación (M5).
+        expect(r).toMatchObject({ doctor: { especialidad: "Ortodoncia" }, ubicacion: ubicacionConsultorio })
         expect(repositorio.ubicacionDelDoctor).toHaveBeenCalledWith(ubicacionId, doctorId)
         expect(repositorio.tipoConsultaDelDoctor).toHaveBeenCalledWith(tipoConsultaId, doctorId)
     })

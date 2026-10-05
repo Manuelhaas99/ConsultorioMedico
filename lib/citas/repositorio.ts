@@ -1,29 +1,34 @@
 import "server-only"
 import { and, eq, gt, lt, notInArray, or, sql } from "drizzle-orm"
 import { db } from "@/lib/db/client"
-import { bloqueoHorario, cita, disponibilidadDoctor, doctor, secretario, tipoConsulta, ubicacion, usuario } from "@/lib/db/schema"
+import { bloqueoHorario, cita, disponibilidadDoctor, doctor, especialidad, secretario, tipoConsulta, ubicacion, usuario } from "@/lib/db/schema"
 import { ESTADOS_QUE_LIBERAN_HORARIO, type EstadoCita, type Intervalo } from "./intervalos"
 import type { FranjaConUbicacion } from "./reglas"
 import type { CitaAgendada, DiaSemana } from "./slots"
+import type { UbicacionCita } from "./ubicacion"
+
+export type DoctorReservable = { id: string; nombre: string; especialidad: string }
 
 /** Doctor aprobado con los datos que necesita una reserva, o `undefined` si no existe o no está aprobado. */
-export async function doctorReservable(doctorId: string): Promise<{ id: string; nombre: string } | undefined> {
+export async function doctorReservable(doctorId: string): Promise<DoctorReservable | undefined> {
     const [fila] = await db
-        .select({ id: doctor.id, nombre: usuario.name })
+        .select({ id: doctor.id, nombre: usuario.name, especialidad: especialidad.nombre })
         .from(doctor)
         .innerJoin(usuario, eq(doctor.usuarioId, usuario.id))
+        .innerJoin(especialidad, eq(doctor.especialidadId, especialidad.id))
         .where(and(eq(doctor.id, doctorId), eq(doctor.aprobado, true)))
         .limit(1)
     return fila
 }
 
-export async function ubicacionDelDoctor(ubicacionId: string, doctorId: string): Promise<boolean> {
+/** Ubicación si pertenece al doctor, o `undefined` si no existe o es de otro doctor. */
+export async function ubicacionDelDoctor(ubicacionId: string, doctorId: string): Promise<UbicacionCita | undefined> {
     const [fila] = await db
-        .select({ id: ubicacion.id })
+        .select({ nombre: ubicacion.nombre, direccion: ubicacion.direccion, colonia: ubicacion.colonia, ciudad: ubicacion.ciudad })
         .from(ubicacion)
         .where(and(eq(ubicacion.id, ubicacionId), eq(ubicacion.doctorId, doctorId)))
         .limit(1)
-    return fila !== undefined
+    return fila
 }
 
 export async function tipoConsultaDelDoctor(
