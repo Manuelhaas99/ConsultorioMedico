@@ -3,7 +3,7 @@ import { generarSlots, MAX_SLOTS, ventanaDeFranjas, type CitaAgendada, type Inte
 
 const fecha = "2026-10-12"
 
-/** Misma construcción horaria que `generarSlots` (hora local del proceso). */
+// Construye las horas igual que generarSlots, en la zona del proceso.
 function hora(h: number, m = 0): Date {
     const d = new Date(fecha)
     d.setHours(h, m, 0, 0)
@@ -55,7 +55,6 @@ describe("generarSlots", () => {
     })
 
     it("una cita que solo traslapa parcialmente ocupa todos los slots que toca", () => {
-        // 09:15–10:15 toca 09:00, 09:30 y 10:00.
         const citas: CitaAgendada[] = [{ inicio: hora(9, 15), fin: hora(10, 15), estado: "confirmada" }]
         const slots = generarSlots({ fecha, duracionMinutos: 30, franjas: manana, bloqueos: [], citas })
         expect(slots.map((s) => s.disponible)).toEqual([false, false, false, true])

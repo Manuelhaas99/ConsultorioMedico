@@ -36,6 +36,20 @@ Variables de entorno: copia `.env.example` a `.env.local`.
 - Funciones pequeñas y puras donde se pueda; I/O en los bordes.
 - Sin `console.log` de depuración en código commiteado; `console.error` solo para errores inesperados.
 
+## Comentarios y documentación
+
+- Comenta solo lo estrictamente necesario: el **porqué** que el código no puede expresar (una decisión no obvia, una restricción externa, un workaround). Nunca el qué. Si algo necesita un comentario para entenderse, primero renombra o simplifica.
+- Prohibido:
+  - comentarios que repiten el código o el nombre de la función;
+  - encabezados decorativos;
+  - bitácora ("se cambió", "antes hacía", "arreglo de X");
+  - IDs de hallazgos, tickets o PRs;
+  - la ruta HTTP encima de su handler;
+  - referencias a otros archivos ("ver x.test.ts");
+  - TODOs sin contexto.
+- La documentación de API (JSDoc en funciones y tipos exportados, contratos de endpoints) se acepta solo cuando el nombre y los tipos no bastan: breve, sin repetir parámetros ni tipos, sin relleno.
+- El mismo criterio aplica a docs, mensajes de commit y descripciones de PR: claro y sin texto redundante.
+
 ## Seguridad
 
 - Autorización en el servicio del dominio, no en `proxy.ts`.
