@@ -13,10 +13,6 @@ import type { SlotsQuery } from "./schemas"
 import { diaSemanaDeFecha, generarSlots, ventanaDeFranjas, type Slot } from "./slots"
 import { ZONA_CONSULTORIO } from "./zona-horaria"
 
-/**
- * Slots del doctor en una fecha (calendario del consultorio), marcando como no
- * disponibles los bloqueados u ocupados.
- */
 export async function obtenerSlots(
     doctorId: string,
     { fecha, duracion }: SlotsQuery,
@@ -37,7 +33,6 @@ export async function obtenerSlots(
     return generarSlots({ fecha, zona, duracionMinutos: duracion, franjas, bloqueos, citas })
 }
 
-/** Indica si el doctor tiene libre `intervalo`, es decir, sin citas activas que lo traslapen. */
 export async function horarioLibre(doctorId: string, intervalo: Intervalo): Promise<boolean> {
     const citas = await citasQueTraslapan(doctorId, intervalo)
     return !chocaConCitas(intervalo, citas)
@@ -45,12 +40,8 @@ export async function horarioLibre(doctorId: string, intervalo: Intervalo): Prom
 
 export type ResultadoReserva = { ok: true; cita: CitaRegistrada } | { ok: false; error: "HORARIO_OCUPADO" }
 
-/**
- * Registra la cita si el horario está libre. La verificación previa da una
- * respuesta rápida, pero la garantía ante peticiones simultáneas es la
- * restricción de exclusión de la base: si otra reserva gana la carrera, la
- * inserción falla con 23P01 y se reporta como HORARIO_OCUPADO.
- */
+// La verificación previa solo responde rápido; ante reservas simultáneas la garantía
+// es la restricción de exclusión, cuya violación también se reporta como HORARIO_OCUPADO.
 export async function reservarCita(valores: NuevaCita): Promise<ResultadoReserva> {
     const libre = await horarioLibre(valores.doctorId, { inicio: valores.fechaInicio, fin: valores.fechaFin })
     if (!libre) return { ok: false, error: "HORARIO_OCUPADO" }

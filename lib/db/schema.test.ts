@@ -10,12 +10,8 @@ import * as schema from "./schema"
 const exportados: readonly unknown[] = Object.values(schema)
 const tablas = exportados.filter((valor): valor is PgTable => is(valor, PgTable))
 
-/**
- * Postgres rechaza una llave foránea cuyas columnas no tienen el mismo tipo
- * que las referenciadas ("incompatible types uuid and text"), y como la
- * migración corre en una transacción, la base queda vacía. Esta prueba lo
- * detecta sin necesidad de una base de datos.
- */
+// Postgres rechaza una llave foránea con tipos distintos ("incompatible types uuid and text")
+// y, como la migración corre en una transacción, la base queda vacía.
 describe("esquema de base de datos", () => {
     it("tiene tablas que revisar", () => {
         expect(tablas.length).toBeGreaterThan(0)
@@ -34,10 +30,7 @@ describe("esquema de base de datos", () => {
     })
 })
 
-/**
- * Índices y CHECKs que sostienen consultas frecuentes e invariantes de datos (M1).
- * Si alguien los quita del esquema, `drizzle-kit generate` los borraría en silencio.
- */
+// Si alguno desaparece del esquema, `drizzle-kit generate` lo borraría de la base en silencio.
 describe("índices y restricciones", () => {
     const configDe = (nombre: string) => {
         const tabla = tablas.find((t) => getTableConfig(t).name === nombre)
