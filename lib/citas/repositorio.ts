@@ -99,6 +99,12 @@ export async function citaPorId(id: string): Promise<CitaRegistrada | undefined>
     return fila
 }
 
+/** Cita de invitado cuyo token de gestión tiene este hash SHA-256. */
+export async function citaPorTokenHash(hash: string): Promise<CitaRegistrada | undefined> {
+    const [fila] = await db.select().from(cita).where(eq(cita.tokenGestionHash, hash)).limit(1)
+    return fila
+}
+
 /** Indica si el usuario es el doctor `doctorId` o uno de sus secretarios. */
 export async function esPersonalDelDoctor(usuarioId: string, doctorId: string): Promise<boolean> {
     const [fila] = await db

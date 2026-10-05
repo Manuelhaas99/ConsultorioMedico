@@ -46,7 +46,7 @@ export async function enviarRecordatorioCita({
                                                  fechaInicio,
                                                  fechaFin,
                                                  direccion,
-                                                 tokenGestion,
+                                                 invitado,
                                                  tiempoRestante,
                                                  citaId,
                                              }: {
@@ -57,7 +57,7 @@ export async function enviarRecordatorioCita({
     fechaInicio: Date
     fechaFin: Date
     direccion?: string
-    tokenGestion?: string
+    invitado: boolean
     tiempoRestante: "24h" | "1h"
     citaId: string
 }) {
@@ -72,7 +72,7 @@ export async function enviarRecordatorioCita({
             fechaInicio,
             fechaFin,
             direccion,
-            tokenGestion,
+            invitado,
             tiempoRestante,
             citaId,
         }),

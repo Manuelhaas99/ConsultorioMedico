@@ -17,7 +17,6 @@ async function handler(request: NextRequest) {
                 fechaInicio: cita.fechaInicio,
                 fechaFin: cita.fechaFin,
                 estado: cita.estado,
-                tokenGestion: cita.tokenGestion,
                 invitadoNombre: cita.invitadoNombre,
                 invitadoEmail: cita.invitadoEmail,
                 pacienteId: cita.pacienteId,
@@ -69,7 +68,8 @@ async function handler(request: NextRequest) {
             especialidad: citaData.especialidadNombre,
             fechaInicio: citaData.fechaInicio,
             fechaFin: citaData.fechaFin,
-            tokenGestion: citaData.tokenGestion ?? undefined,
+            // Solo se guarda el hash del token: el recordatorio de un invitado no puede incluir su enlace.
+            invitado: citaData.pacienteId === null,
             tiempoRestante: tipo,
             citaId,
         })

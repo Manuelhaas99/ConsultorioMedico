@@ -14,9 +14,11 @@ vi.mock("./repositorio", () => ({
     citaPorId: vi.fn(),
     esPersonalDelDoctor: vi.fn(),
     actualizarCitaSiEstado: vi.fn(),
+    citaPorTokenHash: vi.fn(),
 }))
 
 const repositorio = await import("./repositorio")
+const { hashTokenGestion } = await import("./token")
 const { actualizarCita, cancelarCita, crearCita, obtenerCita, reservarCita } = await import("./servicio")
 
 const valores: NuevaCita = {
@@ -97,6 +99,7 @@ describe("crearCita", () => {
             cita: fila,
             doctor: { nombre: "Dra. López" },
             contacto: { nombre: "Ana", email: "ana@example.com" },
+            tokenGestion: null,
         })
         expect(repositorio.franjasDelDia).toHaveBeenCalledWith(doctorId, "lunes")
         expect(repositorio.insertarCita).toHaveBeenCalledWith(
@@ -107,7 +110,8 @@ describe("crearCita", () => {
                 fechaInicio: cdmx(9),
                 fechaFin: cdmx(9, 30),
                 estado: "pendiente",
-                tokenGestion: expect.stringMatching(/^[0-9a-f]{64}$/),
+                // Con sesión no se genera token: el paciente gestiona su cita con su cuenta.
+                tokenGestionHash: null,
             }),
         )
     })
@@ -121,6 +125,12 @@ describe("crearCita", () => {
         expect(repositorio.insertarCita).toHaveBeenCalledWith(
             expect.objectContaining({ pacienteId: null, invitadoNombre: "Luis", invitadoEmail: "luis@example.com" }),
         )
+        // El invitado recibe el token en claro una sola vez; la base guarda solo su SHA-256.
+        if (!r.ok) throw new Error("se esperaba ok")
+        expect(r.tokenGestion).toMatch(/^[A-Za-z0-9_-]{43}$/)
+        const insertado = vi.mocked(repositorio.insertarCita).mock.calls[0]?.[0]
+        expect(insertado?.tokenGestionHash).toBe(hashTokenGestion(r.tokenGestion ?? ""))
+        expect(insertado).not.toHaveProperty("tokenGestion")
     })
 
     type Caso = [nombre: string, preparar: () => void, entrada: CrearCitaEntrada, error: string]
@@ -212,21 +222,26 @@ describe("crearCita", () => {
     })
 })
 
-describe("obtenerCita / actualizarCita / cancelarCita (C8)", () => {
+describe("obtenerCita / actualizarCita / cancelarCita (C8, A2)", () => {
     const ahora = new Date("2026-10-10T12:00:00Z")
+    const token = "t".repeat(43)
     const existente = {
         id: "c1",
         doctorId: "d1",
         pacienteId: "pac",
         estado: "pendiente",
         fechaInicio: new Date("2026-10-12T15:00:00Z"),
-        tokenGestion: "t".repeat(64),
-    } as CitaRegistrada
-    const paciente = { usuarioId: "pac", token: null }
-    const doctor = { usuarioId: "doc", token: null }
+        tokenGestionHash: null,
+    } as unknown as CitaRegistrada
+    const deInvitado = { ...existente, id: "c2", pacienteId: null, tokenGestionHash: hashTokenGestion(token) }
+    const paciente = { citaId: "c1", usuarioId: "pac" }
+    const doctor = { citaId: "c1", usuarioId: "doc" }
 
     beforeEach(() => {
         vi.mocked(repositorio.citaPorId).mockReset().mockResolvedValue(existente)
+        vi.mocked(repositorio.citaPorTokenHash)
+            .mockReset()
+            .mockImplementation(async (hash) => (hash === deInvitado.tokenGestionHash ? deInvitado : undefined))
         vi.mocked(repositorio.esPersonalDelDoctor)
             .mockReset()
             .mockImplementation(async (usuarioId, doctorId) => usuarioId === "doc" && doctorId === "d1")
@@ -236,44 +251,57 @@ describe("obtenerCita / actualizarCita / cancelarCita (C8)", () => {
     })
 
     it("el doctor dueño puede ver la cita por id", async () => {
-        await expect(obtenerCita("c1", doctor)).resolves.toMatchObject({ ok: true, rol: "personal" })
+        await expect(obtenerCita(doctor)).resolves.toMatchObject({ ok: true, rol: "personal" })
     })
 
     it("otro usuario recibe NO_ENCONTRADA (no se revela que la cita existe)", async () => {
-        await expect(obtenerCita("c1", { usuarioId: "otro", token: null })).resolves.toEqual({ ok: false, error: "NO_ENCONTRADA" })
+        await expect(obtenerCita({ citaId: "c1", usuarioId: "otro" })).resolves.toEqual({ ok: false, error: "NO_ENCONTRADA" })
+    })
+
+    it("el token busca la cita por su hash, nunca en claro", async () => {
+        await expect(obtenerCita({ token })).resolves.toMatchObject({ ok: true, rol: "paciente", cita: { id: "c2" } })
+        expect(repositorio.citaPorTokenHash).toHaveBeenCalledWith(hashTokenGestion(token))
+        expect(repositorio.citaPorTokenHash).not.toHaveBeenCalledWith(token)
     })
 
     it("un token incorrecto no da acceso", async () => {
-        await expect(obtenerCita("c1", { usuarioId: null, token: "x" })).resolves.toEqual({ ok: false, error: "NO_ENCONTRADA" })
+        await expect(obtenerCita({ token: "x".repeat(43) })).resolves.toEqual({ ok: false, error: "NO_ENCONTRADA" })
+    })
+
+    it("con el token se aplica la política del paciente", async () => {
+        await expect(actualizarCita({ token }, { notas: "x" }, ahora)).resolves.toEqual({ ok: false, error: "CAMBIO_NO_PERMITIDO" })
+        await expect(actualizarCita({ token }, { estado: "confirmada" }, ahora)).resolves.toEqual({
+            ok: false,
+            error: "CAMBIO_NO_PERMITIDO",
+        })
+        await expect(cancelarCita({ token }, ahora)).resolves.toMatchObject({ ok: true, cita: { estado: "cancelada" } })
+        expect(repositorio.actualizarCitaSiEstado).toHaveBeenCalledWith("c2", "pendiente", { estado: "cancelada" })
     })
 
     it("el paciente no puede confirmar su cita ni escribir notas", async () => {
-        await expect(actualizarCita("c1", { estado: "confirmada" }, paciente, ahora)).resolves.toEqual({
+        await expect(actualizarCita(paciente, { estado: "confirmada" }, ahora)).resolves.toEqual({
             ok: false,
             error: "CAMBIO_NO_PERMITIDO",
         })
-        await expect(actualizarCita("c1", { notas: "x" }, { usuarioId: null, token: "t".repeat(64) }, ahora)).resolves.toEqual({
-            ok: false,
-            error: "CAMBIO_NO_PERMITIDO",
-        })
+        await expect(actualizarCita(paciente, { notas: "x" }, ahora)).resolves.toEqual({ ok: false, error: "CAMBIO_NO_PERMITIDO" })
         expect(repositorio.actualizarCitaSiEstado).not.toHaveBeenCalled()
     })
 
     it("el paciente puede editar el motivo; la escritura es condicional al estado leído", async () => {
-        const r = await actualizarCita("c1", { motivoConsulta: "Limpieza" }, paciente, ahora)
+        const r = await actualizarCita(paciente, { motivoConsulta: "Limpieza" }, ahora)
         expect(r).toMatchObject({ ok: true, rol: "paciente", cita: { motivoConsulta: "Limpieza" } })
         expect(repositorio.actualizarCitaSiEstado).toHaveBeenCalledWith("c1", "pendiente", { motivoConsulta: "Limpieza" })
     })
 
     it("el personal confirma una cita pendiente", async () => {
-        await expect(actualizarCita("c1", { estado: "confirmada" }, doctor, ahora)).resolves.toMatchObject({
+        await expect(actualizarCita(doctor, { estado: "confirmada" }, ahora)).resolves.toMatchObject({
             ok: true,
             cita: { estado: "confirmada" },
         })
     })
 
     it("el personal no puede completar una cita pendiente", async () => {
-        await expect(actualizarCita("c1", { estado: "completada" }, doctor, ahora)).resolves.toEqual({
+        await expect(actualizarCita(doctor, { estado: "completada" }, ahora)).resolves.toEqual({
             ok: false,
             error: "TRANSICION_INVALIDA",
         })
@@ -281,11 +309,11 @@ describe("obtenerCita / actualizarCita / cancelarCita (C8)", () => {
 
     it("reporta CONFLICTO si el estado cambió entre la lectura y la escritura", async () => {
         vi.mocked(repositorio.actualizarCitaSiEstado).mockResolvedValue(undefined)
-        await expect(cancelarCita("c1", paciente, ahora)).resolves.toEqual({ ok: false, error: "CONFLICTO" })
+        await expect(cancelarCita(paciente, ahora)).resolves.toEqual({ ok: false, error: "CONFLICTO" })
     })
 
     it("cancelar una cita ya cancelada no es posible para el paciente", async () => {
         vi.mocked(repositorio.citaPorId).mockResolvedValue({ ...existente, estado: "cancelada" })
-        await expect(cancelarCita("c1", paciente, ahora)).resolves.toEqual({ ok: false, error: "CITA_NO_EDITABLE" })
+        await expect(cancelarCita(paciente, ahora)).resolves.toEqual({ ok: false, error: "CITA_NO_EDITABLE" })
     })
 })

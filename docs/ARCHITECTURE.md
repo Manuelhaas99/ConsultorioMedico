@@ -66,3 +66,11 @@ lib/
 - Mutaciones del personal con Server Actions que llaman a los mismos servicios de `lib/<dominio>`.
 - Formularios validados con los mismos esquemas zod del dominio.
 - Español (`lang="es"`), accesible (etiquetas, teclado, contraste AA) y pensado para recepción: agenda del día como vista principal.
+
+### Gestión de citas de invitados (token)
+
+- Al reservar sin cuenta se genera un token aleatorio de 256 bits. La base guarda solo su SHA-256 (`cita.token_gestion_hash`); el token en claro se devuelve una única vez en la respuesta de `POST /api/appointments` y va en el correo de confirmación. Los pacientes con cuenta no reciben token: gestionan sus citas con sesión.
+- El correo enlaza a `/cita#token=<token>`. El token va en el **fragmento** para que no llegue al servidor, a los logs ni al encabezado `Referer`.
+- La página `/cita` (por construir) debe ser un Client Component que lea `location.hash`, borre el fragmento de la barra (`history.replaceState`) y llame a `/api/appointments/gestion` (`GET`, `PATCH`, `DELETE`) con `Authorization: Bearer <token>`. Nunca debe pasar el token en la query string.
+- Con el token se tiene el rol `paciente` de `lib/citas/politica.ts`: ver la cita, cancelarla y editar el motivo mientras sea futura y esté pendiente o confirmada.
+- Los recordatorios de invitados no incluyen enlace (no se conserva el token en claro); remiten al correo de confirmación.

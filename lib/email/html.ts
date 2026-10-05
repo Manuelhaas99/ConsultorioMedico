@@ -51,11 +51,15 @@ function aHtml(valor: ValorHtml): string {
  * Construye una URL absoluta `http(s)` a partir de una base de confianza (la URL
  * de la app) y una ruta, codificando los parámetros. Devuelve `null` si la base
  * falta o no es `http(s)`, para no generar enlaces rotos ni `javascript:`.
+ *
+ * Los secretos (p. ej. el token de gestión) van en `fragmento` (`#clave=valor`):
+ * el navegador no envía el fragmento al servidor ni lo incluye en `Referer`.
  */
 export function construirUrl(
     base: string | undefined,
     ruta: string,
     parametros: Readonly<Record<string, string>> = {},
+    fragmento: Readonly<Record<string, string>> = {},
 ): string | null {
     if (!base) return null
     let url: URL
@@ -66,6 +70,8 @@ export function construirUrl(
     }
     if (url.protocol !== "https:" && url.protocol !== "http:") return null
     for (const [clave, valor] of Object.entries(parametros)) url.searchParams.set(clave, valor)
+    const hash = new URLSearchParams(fragmento).toString()
+    if (hash) url.hash = hash
     return url.toString()
 }
 

@@ -38,3 +38,13 @@ export function leerQuery<S extends z.ZodType>(request: Request, schema: S): Res
     const params = Object.fromEntries(new URL(request.url).searchParams)
     return aResultado(schema.safeParse(params))
 }
+
+/**
+ * Credencial de `Authorization: Bearer <valor>`, o `null` si no viene.
+ * Solo extrae el valor; quien lo usa debe validarlo con su esquema.
+ */
+export function tokenBearer(request: Request): string | null {
+    const cabecera = request.headers.get("authorization")
+    const coincidencia = cabecera?.match(/^Bearer[ ]+(\S+)[ ]*$/i)
+    return coincidencia?.[1] ?? null
+}

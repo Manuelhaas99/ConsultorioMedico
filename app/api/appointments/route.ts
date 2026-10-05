@@ -8,6 +8,7 @@ import {programarRecordatorios} from "@/lib/queue/reminders";
 import { crearCitaSchema } from "@/lib/citas/schemas"
 import { crearCita, type ErrorCrearCita } from "@/lib/citas/servicio"
 import { errorJson, leerCuerpo } from "@/lib/http"
+import { citaParaPaciente } from "@/lib/citas/dto"
 
 // GET /api/appointments — lista de citas del usuario
 export async function GET(request: NextRequest) {
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
             .from(cita)
             .where(eq(cita.pacienteId, session.user.id))
 
-        return NextResponse.json({ citas })
+        return NextResponse.json({ citas: citas.map(citaParaPaciente) })
     } catch (error) {
         console.error(error)
         return NextResponse.json(
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
                 especialidad: "Odontología",
                 fechaInicio: nuevaCita.fechaInicio,
                 fechaFin: nuevaCita.fechaFin,
-                tokenGestion: nuevaCita.tokenGestion ?? undefined,
+                tokenGestion: resultado.tokenGestion ?? undefined,
             })
         } catch (emailError) {
             console.error("Error enviando email:", emailError)
@@ -98,8 +99,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
             {
                 message: "Cita agendada correctamente",
-                cita: nuevaCita,
-                tokenGestion: nuevaCita.tokenGestion, // para que el invitado pueda gestionar su cita
+                cita: citaParaPaciente(nuevaCita),
+                // Única vez que se entrega el token en claro (solo invitados); la base guarda su hash.
+                ...(resultado.tokenGestion && { tokenGestion: resultado.tokenGestion }),
             },
             { status: 201 }
         )
