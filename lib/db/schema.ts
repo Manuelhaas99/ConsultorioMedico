@@ -127,7 +127,7 @@ export const bloqueoHorario = pgTable("bloqueo_horario", {
 // ── Secretario ─────────────────────────────────────
 export const secretario = pgTable("secretario", {
     id: uuid("id").primaryKey().defaultRandom(),
-    usuarioId: uuid("usuario_id")
+    usuarioId: text("usuario_id")
         .notNull()
         .references(() => usuario.id, { onDelete: "cascade" }),
     doctorId: uuid("doctor_id")

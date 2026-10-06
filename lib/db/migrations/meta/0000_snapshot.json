@@ -618,7 +618,7 @@
         },
         "usuario_id": {
           "name": "usuario_id",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
