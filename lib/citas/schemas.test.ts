@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { crearCitaSchema, doctorIdSchema, slotsQuerySchema } from "./schemas"
+import { estadoCitaEnum } from "@/lib/db/schema"
+import { actualizarCitaSchema, crearCitaSchema, doctorIdSchema, ESTADOS_CITA, slotsQuerySchema } from "./schemas"
 
 describe("slotsQuerySchema", () => {
     it("usa 30 minutos por defecto", () => {
@@ -82,4 +83,26 @@ describe("crearCitaSchema", () => {
         expect(r.invitadoNombre).toBeUndefined()
         expect(r.motivoConsulta).toBe("Limpieza")
     })
+})
+
+describe("actualizarCitaSchema", () => {
+    it("los estados coinciden con el enum de la base", () => {
+        expect([...ESTADOS_CITA]).toEqual(estadoCitaEnum.enumValues)
+    })
+
+    it("acepta estado, motivo y notas; '' o null borran el texto", () => {
+        expect(actualizarCitaSchema.parse({ estado: "cancelada", motivoConsulta: "  Dolor  ", notas: "" })).toEqual({
+            estado: "cancelada",
+            motivoConsulta: "Dolor",
+            notas: null,
+        })
+        expect(actualizarCitaSchema.parse({ motivoConsulta: null })).toEqual({ motivoConsulta: null })
+    })
+
+    it.each([{ estado: "inventado" }, { estado: 1 }, {}, { pacienteId: "x" }, { estado: "cancelada", fechaInicio: "2026-01-01" }, { notas: "x".repeat(5001) }])(
+        "rechaza %j",
+        (cuerpo) => {
+            expect(actualizarCitaSchema.safeParse(cuerpo).success).toBe(false)
+        },
+    )
 })

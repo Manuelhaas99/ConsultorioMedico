@@ -1,8 +1,8 @@
 import "server-only"
-import { and, eq, gt, lt, notInArray } from "drizzle-orm"
+import { and, eq, gt, lt, notInArray, or, sql } from "drizzle-orm"
 import { db } from "@/lib/db/client"
-import { bloqueoHorario, cita, disponibilidadDoctor, doctor, tipoConsulta, ubicacion, usuario } from "@/lib/db/schema"
-import { ESTADOS_QUE_LIBERAN_HORARIO, type Intervalo } from "./intervalos"
+import { bloqueoHorario, cita, disponibilidadDoctor, doctor, secretario, tipoConsulta, ubicacion, usuario } from "@/lib/db/schema"
+import { ESTADOS_QUE_LIBERAN_HORARIO, type EstadoCita, type Intervalo } from "./intervalos"
 import type { FranjaConUbicacion } from "./reglas"
 import type { CitaAgendada, DiaSemana } from "./slots"
 
@@ -83,4 +83,42 @@ export async function insertarCita(valores: NuevaCita): Promise<CitaRegistrada> 
     const [nueva] = await db.insert(cita).values(valores).returning()
     if (!nueva) throw new Error("La inserción de la cita no devolvió filas")
     return nueva
+}
+
+export async function citaPorId(id: string): Promise<CitaRegistrada | undefined> {
+    const [fila] = await db.select().from(cita).where(eq(cita.id, id)).limit(1)
+    return fila
+}
+
+export async function esPersonalDelDoctor(usuarioId: string, doctorId: string): Promise<boolean> {
+    const [fila] = await db
+        .select({ id: doctor.id })
+        .from(doctor)
+        .where(
+            and(
+                eq(doctor.id, doctorId),
+                or(
+                    eq(doctor.usuarioId, usuarioId),
+                    sql`exists (select 1 from ${secretario} where ${secretario.doctorId} = ${doctor.id} and ${secretario.usuarioId} = ${usuarioId})`,
+                ),
+            ),
+        )
+        .limit(1)
+    return fila !== undefined
+}
+
+export type CambiosAplicables = Partial<Pick<NuevaCita, "estado" | "motivoConsulta" | "notas">>
+
+/** Control optimista: devuelve `undefined` si la cita ya no está en `estadoEsperado`. */
+export async function actualizarCitaSiEstado(
+    id: string,
+    estadoEsperado: EstadoCita,
+    cambios: CambiosAplicables,
+): Promise<CitaRegistrada | undefined> {
+    const [fila] = await db
+        .update(cita)
+        .set({ ...cambios, actualizadoEn: new Date() })
+        .where(and(eq(cita.id, id), eq(cita.estado, estadoEsperado)))
+        .returning()
+    return fila
 }

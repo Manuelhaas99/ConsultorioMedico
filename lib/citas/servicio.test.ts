@@ -11,10 +11,13 @@ vi.mock("./repositorio", () => ({
     doctorReservable: vi.fn(),
     ubicacionDelDoctor: vi.fn(),
     tipoConsultaDelDoctor: vi.fn(),
+    citaPorId: vi.fn(),
+    esPersonalDelDoctor: vi.fn(),
+    actualizarCitaSiEstado: vi.fn(),
 }))
 
 const repositorio = await import("./repositorio")
-const { crearCita, reservarCita } = await import("./servicio")
+const { actualizarCita, cancelarCita, crearCita, obtenerCita, reservarCita } = await import("./servicio")
 
 const valores: NuevaCita = {
     doctorId: "6f1c1b7e-0000-4000-8000-000000000001",
@@ -206,5 +209,83 @@ describe("crearCita", () => {
         expect(r.ok).toBe(true)
         expect(repositorio.ubicacionDelDoctor).toHaveBeenCalledWith(ubicacionId, doctorId)
         expect(repositorio.tipoConsultaDelDoctor).toHaveBeenCalledWith(tipoConsultaId, doctorId)
+    })
+})
+
+describe("obtenerCita / actualizarCita / cancelarCita", () => {
+    const ahora = new Date("2026-10-10T12:00:00Z")
+    const existente = {
+        id: "c1",
+        doctorId: "d1",
+        pacienteId: "pac",
+        estado: "pendiente",
+        fechaInicio: new Date("2026-10-12T15:00:00Z"),
+        tokenGestion: "t".repeat(64),
+    } as CitaRegistrada
+    const paciente = { usuarioId: "pac", token: null }
+    const doctor = { usuarioId: "doc", token: null }
+
+    beforeEach(() => {
+        vi.mocked(repositorio.citaPorId).mockReset().mockResolvedValue(existente)
+        vi.mocked(repositorio.esPersonalDelDoctor)
+            .mockReset()
+            .mockImplementation(async (usuarioId, doctorId) => usuarioId === "doc" && doctorId === "d1")
+        vi.mocked(repositorio.actualizarCitaSiEstado)
+            .mockReset()
+            .mockImplementation(async (_id, _estado, cambios) => ({ ...existente, ...cambios }) as CitaRegistrada)
+    })
+
+    it("el doctor dueño puede ver la cita por id", async () => {
+        await expect(obtenerCita("c1", doctor)).resolves.toMatchObject({ ok: true, rol: "personal" })
+    })
+
+    it("otro usuario recibe NO_ENCONTRADA (no se revela que la cita existe)", async () => {
+        await expect(obtenerCita("c1", { usuarioId: "otro", token: null })).resolves.toEqual({ ok: false, error: "NO_ENCONTRADA" })
+    })
+
+    it("un token incorrecto no da acceso", async () => {
+        await expect(obtenerCita("c1", { usuarioId: null, token: "x" })).resolves.toEqual({ ok: false, error: "NO_ENCONTRADA" })
+    })
+
+    it("el paciente no puede confirmar su cita ni escribir notas", async () => {
+        await expect(actualizarCita("c1", { estado: "confirmada" }, paciente, ahora)).resolves.toEqual({
+            ok: false,
+            error: "CAMBIO_NO_PERMITIDO",
+        })
+        await expect(actualizarCita("c1", { notas: "x" }, { usuarioId: null, token: "t".repeat(64) }, ahora)).resolves.toEqual({
+            ok: false,
+            error: "CAMBIO_NO_PERMITIDO",
+        })
+        expect(repositorio.actualizarCitaSiEstado).not.toHaveBeenCalled()
+    })
+
+    it("el paciente puede editar el motivo; la escritura es condicional al estado leído", async () => {
+        const r = await actualizarCita("c1", { motivoConsulta: "Limpieza" }, paciente, ahora)
+        expect(r).toMatchObject({ ok: true, rol: "paciente", cita: { motivoConsulta: "Limpieza" } })
+        expect(repositorio.actualizarCitaSiEstado).toHaveBeenCalledWith("c1", "pendiente", { motivoConsulta: "Limpieza" })
+    })
+
+    it("el personal confirma una cita pendiente", async () => {
+        await expect(actualizarCita("c1", { estado: "confirmada" }, doctor, ahora)).resolves.toMatchObject({
+            ok: true,
+            cita: { estado: "confirmada" },
+        })
+    })
+
+    it("el personal no puede completar una cita pendiente", async () => {
+        await expect(actualizarCita("c1", { estado: "completada" }, doctor, ahora)).resolves.toEqual({
+            ok: false,
+            error: "TRANSICION_INVALIDA",
+        })
+    })
+
+    it("reporta CONFLICTO si el estado cambió entre la lectura y la escritura", async () => {
+        vi.mocked(repositorio.actualizarCitaSiEstado).mockResolvedValue(undefined)
+        await expect(cancelarCita("c1", paciente, ahora)).resolves.toEqual({ ok: false, error: "CONFLICTO" })
+    })
+
+    it("cancelar una cita ya cancelada no es posible para el paciente", async () => {
+        vi.mocked(repositorio.citaPorId).mockResolvedValue({ ...existente, estado: "cancelada" })
+        await expect(cancelarCita("c1", paciente, ahora)).resolves.toEqual({ ok: false, error: "CITA_NO_EDITABLE" })
     })
 })
