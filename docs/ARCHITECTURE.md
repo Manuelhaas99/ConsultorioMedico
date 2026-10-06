@@ -30,6 +30,7 @@ lib/
   db/                        ← Cliente, esquema y migraciones
   email/, queue/             ← Integraciones externas, inicializadas de forma perezosa
   http/                      ← Utilidades de route handlers (leerCuerpo, leerQuery, errorJson)
+  env.ts                     ← Variables de entorno del servidor validadas con zod, por grupo y al primer uso
 ```
 
 ### Reglas de dependencia
@@ -40,7 +41,9 @@ lib/
 4. La **autorización vive en el servicio**, cerca de los datos (patrón Data Access Layer de Next). `proxy.ts` nunca es la única defensa.
 5. Todo módulo de servidor empieza con `import "server-only"` (excepto lógica pura y esquemas que pueda usar el cliente).
 6. Lo que se devuelve al cliente pasa por un DTO: nunca filas completas (correos, tokens, `googleRefreshToken`, notas clínicas).
-7. Las integraciones (Resend, QStash) se crean de forma perezosa dentro de funciones, no al importar el módulo, para que `next build` no requiera secretos.
+7. Las integraciones (base de datos, better-auth, Resend, QStash) se crean de forma perezosa dentro de funciones (`getDb()`, `getAuth()`, `getResend()`, `getQstashClient()`), no al importar el módulo, para que `next build` no requiera secretos. La firma de los webhooks de QStash se verifica dentro del handler (`verificarFirmaQstash`).
+8. Las variables de entorno se leen con `env("<grupo>")` de `lib/env.ts` (validadas con zod), nunca con `process.env.X!`. Al agregar una variable: esquema en `lib/env.ts` y entrada en `.env.example`.
+9. Los scripts que corren fuera de Next (p. ej. `db:seed` con tsx) usan `--conditions=react-server` para poder importar módulos con `server-only`.
 
 ### Errores
 
