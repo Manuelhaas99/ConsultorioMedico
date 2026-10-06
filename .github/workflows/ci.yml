@@ -8,10 +8,25 @@ on:
 jobs:
   verificar:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       NEXT_TELEMETRY_DISABLED: 1
+      # La imagen oficial no habilita SSL; `sslmode` en la URL prevalece sobre la opción `ssl` del cliente.
+      DATABASE_URL: postgres://ci:ci@localhost:5432/ci?sslmode=disable
       # Valores falsos: el build no debe conectarse a servicios reales.
-      DATABASE_URL: postgres://ci:ci@localhost:5432/ci
       BETTER_AUTH_SECRET: ci-secret-no-usar-en-produccion-0123456789
       BETTER_AUTH_URL: http://localhost:3000
       RESEND_API_KEY: re_ci
@@ -31,4 +46,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - name: Migraciones y seed en una base limpia
+        run: |
+          pnpm db:migrate
+          pnpm db:seed
       - run: pnpm build
