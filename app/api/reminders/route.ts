@@ -17,7 +17,6 @@ async function handler(request: NextRequest) {
                 fechaInicio: cita.fechaInicio,
                 fechaFin: cita.fechaFin,
                 estado: cita.estado,
-                tokenGestion: cita.tokenGestion,
                 invitadoNombre: cita.invitadoNombre,
                 invitadoEmail: cita.invitadoEmail,
                 pacienteId: cita.pacienteId,
@@ -69,7 +68,7 @@ async function handler(request: NextRequest) {
             especialidad: citaData.especialidadNombre,
             fechaInicio: citaData.fechaInicio,
             fechaFin: citaData.fechaFin,
-            tokenGestion: citaData.tokenGestion ?? undefined,
+            invitado: citaData.pacienteId === null,
             tiempoRestante: tipo,
             citaId,
         })

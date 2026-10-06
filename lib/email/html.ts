@@ -36,11 +36,15 @@ function aHtml(valor: ValorHtml): string {
     return escaparHtml(String(valor))
 }
 
-/** Devuelve `null` si la base falta o no es `http(s)`, para no generar enlaces rotos ni `javascript:`. */
+/**
+ * Devuelve `null` si la base falta o no es `http(s)`, para no generar enlaces rotos ni `javascript:`.
+ * Los secretos van en `fragmento`: el navegador no lo envía al servidor ni en `Referer`.
+ */
 export function construirUrl(
     base: string | undefined,
     ruta: string,
     parametros: Readonly<Record<string, string>> = {},
+    fragmento: Readonly<Record<string, string>> = {},
 ): string | null {
     if (!base) return null
     let url: URL
@@ -51,6 +55,8 @@ export function construirUrl(
     }
     if (url.protocol !== "https:" && url.protocol !== "http:") return null
     for (const [clave, valor] of Object.entries(parametros)) url.searchParams.set(clave, valor)
+    const hash = new URLSearchParams(fragmento).toString()
+    if (hash) url.hash = hash
     return url.toString()
 }
 

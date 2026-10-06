@@ -27,7 +27,7 @@ export function templateConfirmacionCita({
 }: ConfirmacionCitaProps): string {
     const { fecha, horaInicio, horaFin } = formatearIntervalo(fechaInicio, fechaFin, zona)
 
-    const linkGestion = tokenGestion ? construirUrl(baseUrl, "/cita", { token: tokenGestion }) : null
+    const linkGestion = tokenGestion ? construirUrl(baseUrl, "/cita", {}, { token: tokenGestion }) : null
 
     return html`
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -60,9 +60,11 @@ export function templateConfirmacionCita({
   `.toString()
 }
 
-type RecordatorioCitaProps = ConfirmacionCitaProps & {
+type RecordatorioCitaProps = Omit<ConfirmacionCitaProps, "tokenGestion"> & {
     tiempoRestante: "24h" | "1h"
     citaId: string
+    /** Sin enlace de gestión: la base solo guarda el hash del token. */
+    invitado: boolean
 }
 
 export function templateRecordatorioCita({
@@ -72,16 +74,14 @@ export function templateRecordatorioCita({
     fechaInicio,
     fechaFin,
     direccion,
-    tokenGestion,
+    invitado,
     tiempoRestante,
     zona = ZONA_CONSULTORIO,
     baseUrl = process.env.BETTER_AUTH_URL,
 }: RecordatorioCitaProps): string {
     const { fecha, horaInicio } = formatearIntervalo(fechaInicio, fechaFin, zona)
 
-    const linkCancelar = tokenGestion
-        ? construirUrl(baseUrl, "/cita", { token: tokenGestion, accion: "cancelar" })
-        : construirUrl(baseUrl, "/mis-citas")
+    const linkCancelar = invitado ? null : construirUrl(baseUrl, "/mis-citas")
 
     return html`
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -106,6 +106,7 @@ export function templateRecordatorioCita({
         </a>
       `
       }
+      ${invitado && html`<p>¿No puedes asistir? Cancela desde el enlace de tu correo de confirmación.</p>`}
     </div>
   `.toString()
 }

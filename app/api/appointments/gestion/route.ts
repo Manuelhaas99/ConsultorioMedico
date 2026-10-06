@@ -1,42 +1,42 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getSession } from "@/lib/auth/session"
-import { citaParaRol } from "@/lib/citas/dto"
-import { actualizarCitaSchema, citaIdSchema } from "@/lib/citas/schemas"
+import { citaParaPaciente } from "@/lib/citas/dto"
+import { actualizarCitaSchema } from "@/lib/citas/schemas"
 import { actualizarCita, cancelarCita, obtenerCita, type AccesoCita } from "@/lib/citas/servicio"
-import { errorJson, leerCuerpo } from "@/lib/http"
+import { tokenGestionSchema } from "@/lib/citas/token"
+import { errorJson, leerCuerpo, tokenBearer } from "@/lib/http"
 import { RESPUESTAS_ERROR_ACTUALIZAR } from "../respuestas"
 
-type Contexto = RouteContext<"/api/appointments/[id]">
+// El token viaja en `Authorization`, nunca en la URL, donde quedaría en logs y en Referer.
 
 type Entrada = { ok: true; acceso: AccesoCita } | { ok: false; response: NextResponse }
 
-async function leerEntrada(ctx: Contexto): Promise<Entrada> {
-    const id = citaIdSchema.safeParse((await ctx.params).id)
-    if (!id.success) {
-        return { ok: false, response: errorJson(400, "Datos inválidos", { id: id.error.issues.map((i) => i.message) }) }
+function leerToken(request: NextRequest): Entrada {
+    const token = tokenGestionSchema.safeParse(tokenBearer(request) ?? undefined)
+    if (!token.success) {
+        const response = errorJson(401, "Token de gestión ausente o inválido")
+        response.headers.set("WWW-Authenticate", 'Bearer realm="gestion-cita"')
+        return { ok: false, response }
     }
-    const session = await getSession()
-    if (!session) return { ok: false, response: errorJson(401, "No autenticado") }
-    return { ok: true, acceso: { citaId: id.data, usuarioId: session.user.id } }
+    return { ok: true, acceso: { token: token.data } }
 }
 
-export async function GET(_request: NextRequest, ctx: Contexto) {
+export async function GET(request: NextRequest) {
     try {
-        const entrada = await leerEntrada(ctx)
+        const entrada = leerToken(request)
         if (!entrada.ok) return entrada.response
 
         const resultado = await obtenerCita(entrada.acceso)
         if (!resultado.ok) return errorJson(404, "Cita no encontrada")
-        return NextResponse.json({ cita: citaParaRol(resultado.cita, resultado.rol) })
+        return NextResponse.json({ cita: citaParaPaciente(resultado.cita) })
     } catch (error) {
         console.error(error)
         return errorJson(500, "Error al obtener cita")
     }
 }
 
-export async function PATCH(request: NextRequest, ctx: Contexto) {
+export async function PATCH(request: NextRequest) {
     try {
-        const entrada = await leerEntrada(ctx)
+        const entrada = leerToken(request)
         if (!entrada.ok) return entrada.response
 
         const cuerpo = await leerCuerpo(request, actualizarCitaSchema)
@@ -47,17 +47,16 @@ export async function PATCH(request: NextRequest, ctx: Contexto) {
             const [status, message] = RESPUESTAS_ERROR_ACTUALIZAR[resultado.error]
             return errorJson(status, message)
         }
-        return NextResponse.json({ cita: citaParaRol(resultado.cita, resultado.rol) })
+        return NextResponse.json({ cita: citaParaPaciente(resultado.cita) })
     } catch (error) {
         console.error(error)
         return errorJson(500, "Error al actualizar cita")
     }
 }
 
-// DELETE /api/appointments/[id] — cancelar cita
-export async function DELETE(_request: NextRequest, ctx: Contexto) {
+export async function DELETE(request: NextRequest) {
     try {
-        const entrada = await leerEntrada(ctx)
+        const entrada = leerToken(request)
         if (!entrada.ok) return entrada.response
 
         const resultado = await cancelarCita(entrada.acceso)
@@ -65,10 +64,7 @@ export async function DELETE(_request: NextRequest, ctx: Contexto) {
             const [status, message] = RESPUESTAS_ERROR_ACTUALIZAR[resultado.error]
             return errorJson(status, message)
         }
-        return NextResponse.json({
-            message: "Cita cancelada correctamente",
-            cita: citaParaRol(resultado.cita, resultado.rol),
-        })
+        return NextResponse.json({ message: "Cita cancelada correctamente", cita: citaParaPaciente(resultado.cita) })
     } catch (error) {
         console.error(error)
         return errorJson(500, "Error al cancelar cita")

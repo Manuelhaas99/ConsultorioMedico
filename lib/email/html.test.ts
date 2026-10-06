@@ -42,6 +42,12 @@ describe("construirUrl", () => {
         )
     })
 
+    it("pone los secretos en el fragmento, codificados", () => {
+        expect(construirUrl("https://citas.example", "/cita", {}, { token: "a+b/c", accion: "cancelar" })).toBe(
+            "https://citas.example/cita#token=a%2Bb%2Fc&accion=cancelar",
+        )
+    })
+
     it.each([undefined, "", "no es url", "javascript:alert(1)", "ftp://citas.example"])("rechaza la base %s", (base) => {
         expect(construirUrl(base, "/cita")).toBeNull()
     })
