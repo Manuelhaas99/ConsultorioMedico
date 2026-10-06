@@ -47,4 +47,14 @@ describe("leerEntorno", () => {
             /QSTASH_URL/,
         )
     })
+
+    it("convierte DATABASE_POOL_MAX a número y rechaza valores inválidos", () => {
+        const url = "postgres://localhost/x"
+        expect(leerEntorno("baseDatos", { DATABASE_URL: url, DATABASE_POOL_MAX: "8" }).DATABASE_POOL_MAX).toBe(8)
+        expect(leerEntorno("baseDatos", { DATABASE_URL: url }).DATABASE_POOL_MAX).toBeUndefined()
+        expect(() => leerEntorno("baseDatos", { DATABASE_URL: url, DATABASE_POOL_MAX: "0" })).toThrowError(/DATABASE_POOL_MAX/)
+        expect(() => leerEntorno("baseDatos", { DATABASE_URL: url, DATABASE_POOL_MAX: "muchas" })).toThrowError(
+            /DATABASE_POOL_MAX/,
+        )
+    })
 })

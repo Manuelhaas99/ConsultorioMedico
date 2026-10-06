@@ -22,6 +22,7 @@ const esquemas = {
         DATABASE_URL: texto,
         DATABASE_SSL: texto.optional(),
         DATABASE_CA_CERT: texto.optional(),
+        DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).optional(),
     }),
     auth: z
         .object({

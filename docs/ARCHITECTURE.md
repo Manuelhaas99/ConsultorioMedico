@@ -62,6 +62,7 @@ lib/
 - Invariantes críticos en la base, no solo en código: restricciones `CHECK`, `UNIQUE` y de exclusión (p. ej. que no se traslapen citas activas de un doctor).
 - Operaciones de varios pasos en una transacción (`db.transaction`).
 - La conexión a Postgres siempre verifica el certificado TLS (`lib/db/ssl.ts`): CA del sistema o `DATABASE_CA_CERT`. Solo se desactiva TLS de forma explícita (`DATABASE_SSL=disable` o `sslmode=disable`) para un Postgres local o de CI; `sslmode=no-verify` se rechaza.
+- Un solo `Pool` de `pg` por proceso (`lib/db/client.ts`): en desarrollo vive en `globalThis` para sobrevivir a las recargas en caliente. Pocas conexiones por instancia (`DATABASE_POOL_MAX`, 5 por defecto) y cierre de ociosas a los 10 s, pensado para serverless; en producción usa la URL con pooler del proveedor.
 - Cambios de esquema siempre con migración generada (`pnpm db:generate`) o SQL personalizado (`drizzle-kit generate --custom`); nunca `push` en producción ni editar migraciones ya aplicadas.
 
 ### UI (cuando se construya)
@@ -78,3 +79,10 @@ lib/
 - La página `/cita` (por construir) debe ser un Client Component que lea `location.hash`, borre el fragmento de la barra (`history.replaceState`) y llame a `/api/appointments/gestion` (`GET`, `PATCH`, `DELETE`) con `Authorization: Bearer <token>`. Nunca debe pasar el token en la query string.
 - Con el token se tiene el rol `paciente` de `lib/citas/politica.ts`: ver la cita, cancelarla y editar el motivo mientras sea futura y esté pendiente o confirmada.
 - Los recordatorios de invitados no incluyen enlace (no se conserva el token en claro); remiten al correo de confirmación.
+
+### Recordatorios (QStash)
+
+- Al crear una cita, `programarRecordatorios` (`lib/queue/reminders.ts`) publica un mensaje por recordatorio futuro (24 h y 1 h antes) con `{ citaId, tipo, fechaInicio }`. Nunca lleva el correo: el destinatario se lee de la base al enviar.
+- `POST /api/reminders` verifica la firma, valida el cuerpo con zod y llama a `procesarRecordatorio` (`lib/recordatorios/servicio.ts`), que omite citas inexistentes, inactivas o cuyo horario ya no coincide con `fechaInicio` (cancelar o reprogramar no requiere borrar mensajes en QStash).
+- Idempotencia: el recordatorio se marca como enviado con un `UPDATE ... WHERE recordatorio_X_enviado = false RETURNING` **antes** de enviar; si Resend falla se revierte y se responde 500 para que QStash reintente. La misma clave (`claveRecordatorio`) se usa como `deduplicationId` en QStash y como `idempotencyKey` en Resend.
+- Reprogramar una cita (cuando exista) debe volver a llamar a `programarRecordatorios` con la nueva fecha y poner en `false` las banderas `recordatorio_*_enviado`.

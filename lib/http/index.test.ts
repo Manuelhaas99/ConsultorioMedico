@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { leerCuerpo, leerQuery, tokenBearer } from "./index"
+import { leerCuerpo, leerJson, leerQuery, tokenBearer } from "./index"
 
 const schema = z.object({ nombre: z.string().min(1), edad: z.coerce.number().int().positive() })
 
@@ -47,5 +47,17 @@ describe("tokenBearer", () => {
 
     it.each([undefined, "", "Bearer", "Bearer ", "Basic abc", "Bearer a b", "abc"])("devuelve null con %j", (valor) => {
         expect(tokenBearer(con(valor))).toBeNull()
+    })
+})
+
+describe("leerJson", () => {
+    it("valida un cuerpo ya leído como texto", () => {
+        expect(leerJson(JSON.stringify({ nombre: "Ana", edad: "3" }), schema)).toEqual({
+            ok: true,
+            data: { nombre: "Ana", edad: 3 },
+        })
+        const invalido = leerJson("{no-json", schema)
+        expect(invalido.ok).toBe(false)
+        if (!invalido.ok) expect(invalido.response.status).toBe(400)
     })
 })
