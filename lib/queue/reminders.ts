@@ -1,3 +1,5 @@
+import "server-only"
+import { env } from "@/lib/env"
 import { getQstashClient } from "./client"
 
 export async function programarRecordatorios({
@@ -10,7 +12,7 @@ export async function programarRecordatorios({
     emailPaciente: string
 }) {
     const qstash = getQstashClient()
-    const baseUrl = process.env.BETTER_AUTH_URL!
+    const baseUrl = env("app").BETTER_AUTH_URL
 
     console.log("QSTASH TOKEN:", process.env.QSTASH_TOKEN ? "existe" : "VACIO")
     console.log("QSTASH URL:", process.env.QSTASH_URL)

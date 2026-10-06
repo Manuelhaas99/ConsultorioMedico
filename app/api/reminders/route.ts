@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
-import { verifySignatureAppRouter } from "@upstash/qstash/nextjs"
 import { db } from "@/lib/db/client"
 import { cita, doctor, usuario, especialidad } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { enviarRecordatorioCita } from "@/lib/email/send"
+import { verificarFirmaQstash } from "@/lib/queue/firma"
 
-async function handler(request: NextRequest) {
+export async function POST(request: NextRequest) {
+    // Dentro del handler para que las llaves de QStash se lean en ejecución, no en el build.
+    const firma = await verificarFirmaQstash(request)
+    if (!firma.ok) {
+        return NextResponse.json({ message: "Firma inválida" }, { status: 403 })
+    }
+
     try {
-        const body = await request.json()
+        const body = JSON.parse(firma.cuerpo)
         const { citaId, tipo, emailPaciente } = body
 
         // Obtener datos de la cita
@@ -91,5 +97,3 @@ async function handler(request: NextRequest) {
         )
     }
 }
-
-export const POST = verifySignatureAppRouter(handler)
