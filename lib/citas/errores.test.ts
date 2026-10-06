@@ -33,9 +33,10 @@ describe("esTraslapeDeCitas", () => {
     })
 })
 
+// 0003 recreó con tstzrange la restricción que 0001 creó con tsrange.
 describe("migración de la restricción de exclusión", () => {
     const sql = readFileSync(
-        fileURLToPath(new URL("../db/migrations/0001_exclusion_citas_traslapadas.sql", import.meta.url)),
+        fileURLToPath(new URL("../db/migrations/0003_zona_horaria_timestamptz.sql", import.meta.url)),
         "utf8",
     )
 
@@ -43,8 +44,8 @@ describe("migración de la restricción de exclusión", () => {
         expect(sql).toContain(`ADD CONSTRAINT "${RESTRICCION_SIN_TRASLAPE}" EXCLUDE USING gist`)
     })
 
-    it("usa intervalos semiabiertos como la lógica de la app", () => {
-        expect(sql).toMatch(/tsrange\("fecha_inicio", "fecha_fin", '\[\)'\) WITH &&/)
+    it("usa intervalos semiabiertos con zona (tstzrange) como la lógica de la app", () => {
+        expect(sql).toMatch(/tstzrange\("fecha_inicio", "fecha_fin", '\[\)'\) WITH &&/)
     })
 
     it("libera exactamente los mismos estados que ESTADOS_QUE_LIBERAN_HORARIO", () => {

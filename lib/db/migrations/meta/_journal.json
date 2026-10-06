@@ -15,6 +15,20 @@
       "when": 1791162230744,
       "tag": "0001_exclusion_citas_traslapadas",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791162408856,
+      "tag": "0002_indices_y_restricciones",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791162738893,
+      "tag": "0003_zona_horaria_timestamptz",
+      "breakpoints": true
     }
   ]
 }

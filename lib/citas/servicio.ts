@@ -11,13 +11,18 @@ import {
 import { chocaConCitas, type Intervalo } from "./intervalos"
 import type { SlotsQuery } from "./schemas"
 import { diaSemanaDeFecha, generarSlots, ventanaDeFranjas, type Slot } from "./slots"
+import { ZONA_CONSULTORIO } from "./zona-horaria"
 
-export async function obtenerSlots(doctorId: string, { fecha, duracion }: SlotsQuery): Promise<Slot[]> {
+export async function obtenerSlots(
+    doctorId: string,
+    { fecha, duracion }: SlotsQuery,
+    zona: string = ZONA_CONSULTORIO,
+): Promise<Slot[]> {
     const diaSemana = diaSemanaDeFecha(fecha)
     if (!diaSemana) return []
 
     const franjas = await franjasDelDia(doctorId, diaSemana)
-    const ventana = ventanaDeFranjas(fecha, franjas)
+    const ventana = ventanaDeFranjas(fecha, franjas, zona)
     if (!ventana) return []
 
     const [bloqueos, citas] = await Promise.all([
@@ -25,7 +30,7 @@ export async function obtenerSlots(doctorId: string, { fecha, duracion }: SlotsQ
         citasQueTraslapan(doctorId, ventana),
     ])
 
-    return generarSlots({ fecha, duracionMinutos: duracion, franjas, bloqueos, citas })
+    return generarSlots({ fecha, zona, duracionMinutos: duracion, franjas, bloqueos, citas })
 }
 
 export async function horarioLibre(doctorId: string, intervalo: Intervalo): Promise<boolean> {

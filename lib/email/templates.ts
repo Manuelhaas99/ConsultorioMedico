@@ -1,3 +1,5 @@
+import { formatearIntervalo, ZONA_CONSULTORIO } from "@/lib/citas/zona-horaria"
+
 type ConfirmacionCitaProps = {
     nombrePaciente: string
     nombreDoctor: string
@@ -6,6 +8,7 @@ type ConfirmacionCitaProps = {
     fechaFin: Date
     direccion?: string
     tokenGestion?: string
+    zona?: string
 }
 
 export function templateConfirmacionCita({
@@ -16,21 +19,9 @@ export function templateConfirmacionCita({
                                              fechaFin,
                                              direccion,
                                              tokenGestion,
+                                             zona = ZONA_CONSULTORIO,
                                          }: ConfirmacionCitaProps): string {
-    const fecha = fechaInicio.toLocaleDateString("es-MX", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-    })
-    const horaInicio = fechaInicio.toLocaleTimeString("es-MX", {
-        hour: "2-digit",
-        minute: "2-digit",
-    })
-    const horaFin = fechaFin.toLocaleTimeString("es-MX", {
-        hour: "2-digit",
-        minute: "2-digit",
-    })
+    const { fecha, horaInicio, horaFin } = formatearIntervalo(fechaInicio, fechaFin, zona)
 
     const linkGestion = tokenGestion
         ? `${process.env.BETTER_AUTH_URL}/cita?token=${tokenGestion}`
@@ -83,17 +74,9 @@ export function templateRecordatorioCita({
                                              tokenGestion,
                                              tiempoRestante,
                                              citaId,
+                                             zona = ZONA_CONSULTORIO,
                                          }: RecordatorioCitaProps): string {
-    const fecha = fechaInicio.toLocaleDateString("es-MX", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-    })
-    const horaInicio = fechaInicio.toLocaleTimeString("es-MX", {
-        hour: "2-digit",
-        minute: "2-digit",
-    })
+    const { fecha, horaInicio } = formatearIntervalo(fechaInicio, fechaFin, zona)
 
     const linkCancelar = tokenGestion
         ? `${process.env.BETTER_AUTH_URL}/cita?token=${tokenGestion}&accion=cancelar`
