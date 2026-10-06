@@ -90,6 +90,11 @@ export async function citaPorId(id: string): Promise<CitaRegistrada | undefined>
     return fila
 }
 
+export async function citaPorTokenHash(hash: string): Promise<CitaRegistrada | undefined> {
+    const [fila] = await db.select().from(cita).where(eq(cita.tokenGestionHash, hash)).limit(1)
+    return fila
+}
+
 export async function esPersonalDelDoctor(usuarioId: string, doctorId: string): Promise<boolean> {
     const [fila] = await db
         .select({ id: doctor.id })

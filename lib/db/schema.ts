@@ -178,7 +178,7 @@ export const cita = pgTable("cita", {
     motivoConsulta: text("motivo_consulta"),
     notas: text("notas"),
     googleCalendarEventId: text("google_calendar_event_id"),
-    tokenGestion: text("token_gestion").unique(), // para gestionar sin login
+    tokenGestionHash: text("token_gestion_hash").unique(),
     recordatorio24hEnviado: boolean("recordatorio_24h_enviado").default(false).notNull(),
     recordatorio1hEnviado: boolean("recordatorio_1h_enviado").default(false).notNull(),
     asistio: boolean("asistio"),
@@ -188,6 +188,7 @@ export const cita = pgTable("cita", {
     index("cita_doctor_id_fecha_inicio_idx").on(t.doctorId, t.fechaInicio),
     index("cita_paciente_id_idx").on(t.pacienteId),
     check("cita_fechas_validas", sql`${t.fechaFin} > ${t.fechaInicio}`),
+    check("cita_token_gestion_hash_formato", sql`${t.tokenGestionHash} ~ '^[0-9a-f]{64}$'`),
     check(
         "cita_paciente_o_invitado",
         // coalesce: con NULL la comparación da NULL y el CHECK lo dejaría pasar.

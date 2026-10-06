@@ -1,5 +1,5 @@
 import { resend } from "./client"
-import { templateConfirmacionCita, templateRecordatorioCita } from "./templates"
+import { asuntoConfirmacion, asuntoRecordatorio, templateConfirmacionCita, templateRecordatorioCita } from "./templates"
 
 const FROM = "Citas Médicas <onboarding@resend.dev>"
 
@@ -25,7 +25,7 @@ export async function enviarConfirmacionCita({
     return resend.emails.send({
         from: FROM,
         to: email,
-        subject: `Cita confirmada con ${nombreDoctor}`,
+        subject: asuntoConfirmacion(nombreDoctor),
         html: templateConfirmacionCita({
             nombrePaciente,
             nombreDoctor,
@@ -46,7 +46,7 @@ export async function enviarRecordatorioCita({
                                                  fechaInicio,
                                                  fechaFin,
                                                  direccion,
-                                                 tokenGestion,
+                                                 invitado,
                                                  tiempoRestante,
                                                  citaId,
                                              }: {
@@ -57,14 +57,14 @@ export async function enviarRecordatorioCita({
     fechaInicio: Date
     fechaFin: Date
     direccion?: string
-    tokenGestion?: string
+    invitado: boolean
     tiempoRestante: "24h" | "1h"
     citaId: string
 }) {
     return resend.emails.send({
         from: FROM,
         to: email,
-        subject: `Recordatorio: cita con ${nombreDoctor} en ${tiempoRestante === "24h" ? "24 horas" : "1 hora"}`,
+        subject: asuntoRecordatorio(nombreDoctor, tiempoRestante),
         html: templateRecordatorioCita({
             nombrePaciente,
             nombreDoctor,
@@ -72,7 +72,7 @@ export async function enviarRecordatorioCita({
             fechaInicio,
             fechaFin,
             direccion,
-            tokenGestion,
+            invitado,
             tiempoRestante,
             citaId,
         }),

@@ -1,10 +1,10 @@
 import "server-only"
-import { randomBytes } from "node:crypto"
 import { esTraslapeDeCitas } from "./errores"
 import {
     actualizarCitaSiEstado,
     bloqueosQueTraslapan,
     citaPorId,
+    citaPorTokenHash,
     citasQueTraslapan,
     esPersonalDelDoctor,
     doctorReservable,
@@ -20,6 +20,7 @@ import { chocaConBloqueos, dentroDeDisponibilidad, diaLocal, validarDuracion, va
 import { puedeEditar, puedeVer, rolEnCita, type CambiosCita, type ErrorEdicion, type RolEnCita } from "./politica"
 import type { CrearCitaEntrada, SlotsQuery } from "./schemas"
 import { diaSemanaDeFecha, generarSlots, ventanaDeFranjas, type Slot } from "./slots"
+import { generarTokenGestion, hashTokenGestion } from "./token"
 import { ZONA_CONSULTORIO } from "./zona-horaria"
 
 export async function obtenerSlots(
@@ -76,7 +77,14 @@ export type ErrorCrearCita =
     | "HORARIO_OCUPADO"
 
 export type ResultadoCrearCita =
-    | { ok: true; cita: CitaRegistrada; doctor: { nombre: string }; contacto: Contacto }
+    | {
+          ok: true
+          cita: CitaRegistrada
+          doctor: { nombre: string }
+          contacto: Contacto
+          /** Solo se conoce aquí: la base guarda su hash. `null` con sesión. */
+          tokenGestion: string | null
+      }
     | { ok: false; error: ErrorCrearCita }
 
 /** A quién se notifica la cita. */
@@ -125,6 +133,8 @@ export async function crearCita(
         return { ok: false, error: "HORARIO_BLOQUEADO" }
     }
 
+    // Solo los invitados necesitan token: quien tiene cuenta gestiona su cita con sesión.
+    const token = usuario ? null : generarTokenGestion()
     const reserva = await reservarCita({
         doctorId: doctor.id,
         pacienteId: usuario?.id ?? null,
@@ -137,11 +147,17 @@ export async function crearCita(
         fechaFin: intervalo.fin,
         estado: "pendiente",
         motivoConsulta: entrada.motivoConsulta ?? null,
-        tokenGestion: randomBytes(32).toString("hex"),
+        tokenGestionHash: token?.hash ?? null,
     })
     if (!reserva.ok) return reserva
 
-    return { ok: true, cita: reserva.cita, doctor: { nombre: doctor.nombre }, contacto }
+    return {
+        ok: true,
+        cita: reserva.cita,
+        doctor: { nombre: doctor.nombre },
+        contacto,
+        tokenGestion: token?.token ?? null,
+    }
 }
 
 function contactoDeReserva(entrada: CrearCitaEntrada, usuario: ContextoCrearCita["usuario"]): Contacto | null {
@@ -152,28 +168,34 @@ function contactoDeReserva(entrada: CrearCitaEntrada, usuario: ContextoCrearCita
     return null
 }
 
-export type IdentidadCita = { usuarioId: string | null; token: string | null }
+/** El token de gestión de un invitado identifica la cita por sí solo. */
+export type AccesoCita = { citaId: string; usuarioId: string } | { token: string }
 
 type CitaConRol = { cita: CitaRegistrada; rol: RolEnCita }
 
-/** Devuelve `null` también sin acceso, para no revelar qué identificadores existen. */
-async function citaConAcceso(id: string, identidad: IdentidadCita): Promise<CitaConRol | null> {
-    const fila = await citaPorId(id)
+/**
+ * Devuelve `null` también sin acceso, para no revelar qué identificadores existen.
+ * El token se busca por su hash: nunca se compara en claro.
+ */
+async function citaConAcceso(acceso: AccesoCita): Promise<CitaConRol | null> {
+    if ("token" in acceso) {
+        const fila = await citaPorTokenHash(hashTokenGestion(acceso.token))
+        if (!fila) return null
+        const rol = rolEnCita(fila, { usuarioId: null, esPersonal: false, tokenValido: true })
+        return puedeVer(rol) ? { cita: fila, rol } : null
+    }
+    const fila = await citaPorId(acceso.citaId)
     if (!fila) return null
-    const esPersonal = identidad.usuarioId ? await esPersonalDelDoctor(identidad.usuarioId, fila.doctorId) : false
-    const rol = rolEnCita(fila, {
-        usuarioId: identidad.usuarioId,
-        esPersonal,
-        tokenValido: identidad.token !== null && fila.tokenGestion !== null && fila.tokenGestion === identidad.token,
-    })
+    const esPersonal = await esPersonalDelDoctor(acceso.usuarioId, fila.doctorId)
+    const rol = rolEnCita(fila, { usuarioId: acceso.usuarioId, esPersonal, tokenValido: false })
     return puedeVer(rol) ? { cita: fila, rol } : null
 }
 
 export type ResultadoObtenerCita = ({ ok: true } & CitaConRol) | { ok: false; error: "NO_ENCONTRADA" }
 
-export async function obtenerCita(id: string, identidad: IdentidadCita): Promise<ResultadoObtenerCita> {
-    const acceso = await citaConAcceso(id, identidad)
-    return acceso ? { ok: true, ...acceso } : { ok: false, error: "NO_ENCONTRADA" }
+export async function obtenerCita(acceso: AccesoCita): Promise<ResultadoObtenerCita> {
+    const resultado = await citaConAcceso(acceso)
+    return resultado ? { ok: true, ...resultado } : { ok: false, error: "NO_ENCONTRADA" }
 }
 
 export type ErrorActualizarCita =
@@ -185,23 +207,22 @@ export type ResultadoActualizarCita = ({ ok: true } & CitaConRol) | { ok: false;
 
 /** La escritura es condicional al estado leído para no pisar un cambio concurrente. */
 export async function actualizarCita(
-    id: string,
+    acceso: AccesoCita,
     cambios: CambiosCita,
-    identidad: IdentidadCita,
     ahora: Date = new Date(),
 ): Promise<ResultadoActualizarCita> {
-    const acceso = await citaConAcceso(id, identidad)
-    if (!acceso) return { ok: false, error: "NO_ENCONTRADA" }
+    const actual = await citaConAcceso(acceso)
+    if (!actual) return { ok: false, error: "NO_ENCONTRADA" }
 
-    const error = puedeEditar(acceso.rol, acceso.cita, cambios, ahora)
+    const error = puedeEditar(actual.rol, actual.cita, cambios, ahora)
     if (error === "NO_AUTORIZADO") return { ok: false, error: "NO_ENCONTRADA" }
     if (error) return { ok: false, error }
 
-    const actualizada = await actualizarCitaSiEstado(id, acceso.cita.estado, cambios)
+    const actualizada = await actualizarCitaSiEstado(actual.cita.id, actual.cita.estado, cambios)
     if (!actualizada) return { ok: false, error: "CONFLICTO" }
-    return { ok: true, cita: actualizada, rol: acceso.rol }
+    return { ok: true, cita: actualizada, rol: actual.rol }
 }
 
-export function cancelarCita(id: string, identidad: IdentidadCita, ahora: Date = new Date()) {
-    return actualizarCita(id, { estado: "cancelada" }, identidad, ahora)
+export function cancelarCita(acceso: AccesoCita, ahora: Date = new Date()) {
+    return actualizarCita(acceso, { estado: "cancelada" }, ahora)
 }
