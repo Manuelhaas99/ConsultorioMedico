@@ -84,11 +84,7 @@ export async function POST(request: NextRequest) {
 
         // Programar recordatorios
         try {
-            await programarRecordatorios({
-                citaId: nuevaCita.id,
-                fechaInicio: nuevaCita.fechaInicio,
-                emailPaciente: contacto.email,
-            })
+            await programarRecordatorios({ citaId: nuevaCita.id, fechaInicio: nuevaCita.fechaInicio })
         } catch (qstashError) {
             console.error("Error programando recordatorios:", qstashError)
             // No fallamos la cita si QStash falla
