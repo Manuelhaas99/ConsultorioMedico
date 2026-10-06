@@ -71,6 +71,7 @@ lib/
 - Mutaciones del personal con Server Actions que llaman a los mismos servicios de `lib/<dominio>`.
 - Formularios validados con los mismos esquemas zod del dominio.
 - Español (`lang="es"`), accesible (etiquetas, teclado, contraste AA) y pensado para recepción: agenda del día como vista principal.
+- `app/layout.tsx` define `title.template` (`%s | Citas Dentales`): cada página exporta solo su `title`. `app/not-found.tsx` y `app/error.tsx` (Client Component con `retry()`) dan los mensajes de 404 y de error inesperado en español; nunca muestran el mensaje original del error, solo su `digest`.
 
 ### Gestión de citas de invitados (token)
 
