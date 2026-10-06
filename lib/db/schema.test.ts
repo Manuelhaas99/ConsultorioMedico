@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
+
 import { is } from "drizzle-orm"
 import { getTableConfig, PgTable } from "drizzle-orm/pg-core"
 import { describe, expect, it } from "vitest"
@@ -62,4 +65,42 @@ describe("índices y restricciones", () => {
     ])("%s tiene el CHECK %s", (tabla, nombre) => {
         expect(configDe(tabla).checks.map((c) => c.name)).toContain(nombre)
     })
+})
+
+// Un `timestamp` sin zona depende de la zona de quien escribe y lee.
+describe("instantes con zona horaria", () => {
+    const columnasTimestamp = tablas.flatMap((tabla) => {
+        const { name, columns } = getTableConfig(tabla)
+        return columns
+            .filter((c) => c.getSQLType().startsWith("timestamp"))
+            .map((c) => ({ tabla: name, columna: c.name, tipo: c.getSQLType() }))
+    })
+
+    it("hay columnas timestamp que revisar", () => {
+        expect(columnasTimestamp.length).toBeGreaterThan(0)
+    })
+
+    it.each(columnasTimestamp)("$tabla.$columna es timestamp with time zone", ({ tipo }) => {
+        expect(tipo).toBe("timestamp with time zone")
+    })
+})
+
+// Por separado, el CHECK `fecha_fin > fecha_inicio` compararía timestamptz con
+// timestamp y la migración fallaría en sesiones al este de UTC.
+describe("migración 0003 a timestamptz", () => {
+    const sentencias = readFileSync(
+        fileURLToPath(new URL("./migrations/0003_zona_horaria_timestamptz.sql", import.meta.url)),
+        "utf8",
+    ).split("--> statement-breakpoint")
+
+    it.each(["cita", "bloqueo_horario"])(
+        "%s altera fecha_inicio y fecha_fin en la misma sentencia",
+        (tabla) => {
+            const alteranInicio = sentencias.filter(
+                (s) => s.includes(`ALTER TABLE "${tabla}"`) && s.includes(`ALTER COLUMN "fecha_inicio"`),
+            )
+            expect(alteranInicio).toHaveLength(1)
+            expect(alteranInicio[0]).toContain(`ALTER COLUMN "fecha_fin"`)
+        },
+    )
 })

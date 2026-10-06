@@ -43,7 +43,7 @@ export const especialidad = pgTable("especialidad", {
     id: uuid("id").primaryKey().defaultRandom(),
     nombre: text("nombre").notNull().unique(),
     icono: text("icono"),
-    creadoEn: timestamp("creado_en").defaultNow().notNull(),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow().notNull(),
 })
 
 // ── Usuario (mejor-auth lo genera, solo extendemos) ─
@@ -56,8 +56,8 @@ export const usuario = pgTable("usuario", {
     telefonoVerificado: boolean("telefono_verificado").default(false),
     image: text("image"),
     rol: rolEnum("rol").default("paciente").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 })
 
 // ── Doctor ─────────────────────────────────────────
@@ -74,7 +74,7 @@ export const doctor = pgTable("doctor", {
     aprobado: boolean("aprobado").default(false).notNull(),
     googleCalendarId: text("google_calendar_id"),
     googleRefreshToken: text("google_refresh_token"),
-    creadoEn: timestamp("creado_en").defaultNow().notNull(),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
     index("doctor_usuario_id_idx").on(t.usuarioId),
 ])
@@ -90,7 +90,7 @@ export const ubicacion = pgTable("ubicacion", {
     ciudad: text("ciudad").notNull(),
     colonia: text("colonia"),
     urlMapa: text("url_mapa"),
-    creadoEn: timestamp("creado_en").defaultNow().notNull(),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
     index("ubicacion_doctor_id_idx").on(t.doctorId),
 ])
@@ -103,7 +103,7 @@ export const tipoConsulta = pgTable("tipo_consulta", {
         .references(() => doctor.id, { onDelete: "cascade" }),
     nombre: text("nombre").notNull(),
     duracionMinutos: integer("duracion_minutos").notNull().default(30),
-    creadoEn: timestamp("creado_en").defaultNow().notNull(),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
     index("tipo_consulta_doctor_id_idx").on(t.doctorId),
     check("tipo_consulta_duracion_positiva", sql`${t.duracionMinutos} > 0`),
@@ -131,10 +131,10 @@ export const bloqueoHorario = pgTable("bloqueo_horario", {
     doctorId: uuid("doctor_id")
         .notNull()
         .references(() => doctor.id, { onDelete: "cascade" }),
-    fechaInicio: timestamp("fecha_inicio").notNull(),
-    fechaFin: timestamp("fecha_fin").notNull(),
+    fechaInicio: timestamp("fecha_inicio", { withTimezone: true }).notNull(),
+    fechaFin: timestamp("fecha_fin", { withTimezone: true }).notNull(),
     motivo: text("motivo"),
-    creadoEn: timestamp("creado_en").defaultNow().notNull(),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
     index("bloqueo_horario_doctor_id_idx").on(t.doctorId),
     check("bloqueo_horario_fechas_validas", sql`${t.fechaFin} > ${t.fechaInicio}`),
@@ -149,14 +149,14 @@ export const secretario = pgTable("secretario", {
     doctorId: uuid("doctor_id")
         .notNull()
         .references(() => doctor.id, { onDelete: "cascade" }),
-    creadoEn: timestamp("creado_en").defaultNow().notNull(),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
     index("secretario_doctor_id_idx").on(t.doctorId),
 ])
 
 // ── Cita ───────────────────────────────────────────
 // La restricción de exclusión `cita_sin_traslape_por_doctor` no se puede expresar
-// en Drizzle; vive en una migración personalizada.
+// en Drizzle; vive en migraciones personalizadas.
 export const cita = pgTable("cita", {
     id: uuid("id").primaryKey().defaultRandom(),
     doctorId: uuid("doctor_id")
@@ -172,8 +172,8 @@ export const cita = pgTable("cita", {
     invitadoNombre: text("invitado_nombre"),
     invitadoEmail: text("invitado_email"),
     invitadoTelefono: text("invitado_telefono"),
-    fechaInicio: timestamp("fecha_inicio").notNull(),
-    fechaFin: timestamp("fecha_fin").notNull(),
+    fechaInicio: timestamp("fecha_inicio", { withTimezone: true }).notNull(),
+    fechaFin: timestamp("fecha_fin", { withTimezone: true }).notNull(),
     estado: estadoCitaEnum("estado").default("pendiente").notNull(),
     motivoConsulta: text("motivo_consulta"),
     notas: text("notas"),
@@ -182,8 +182,8 @@ export const cita = pgTable("cita", {
     recordatorio24hEnviado: boolean("recordatorio_24h_enviado").default(false).notNull(),
     recordatorio1hEnviado: boolean("recordatorio_1h_enviado").default(false).notNull(),
     asistio: boolean("asistio"),
-    creadoEn: timestamp("creado_en").defaultNow().notNull(),
-    actualizadoEn: timestamp("actualizado_en").defaultNow().notNull(),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow().notNull(),
+    actualizadoEn: timestamp("actualizado_en", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
     index("cita_doctor_id_fecha_inicio_idx").on(t.doctorId, t.fechaInicio),
     index("cita_paciente_id_idx").on(t.pacienteId),
@@ -198,10 +198,10 @@ export const cita = pgTable("cita", {
 // ── Better-auth tables ─────────────────────────────
 export const session = pgTable("session", {
     id: text("id").primaryKey(),
-    expiresAt: timestamp("expires_at").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     token: text("token").notNull().unique(),
-    createdAt: timestamp("created_at").notNull(),
-    updatedAt: timestamp("updated_at").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
     ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
     userId: text("user_id")
@@ -219,19 +219,19 @@ export const account = pgTable("account", {
     accessToken: text("access_token"),
     refreshToken: text("refresh_token"),
     idToken: text("id_token"),
-    accessTokenExpiresAt: timestamp("access_token_expires_at"),
-    refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true }),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }),
     scope: text("scope"),
     password: text("password"),
-    createdAt: timestamp("created_at").notNull(),
-    updatedAt: timestamp("updated_at").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
 })
 
 export const verification = pgTable("verification", {
     id: text("id").primaryKey(),
     identifier: text("identifier").notNull(),
     value: text("value").notNull(),
-    expiresAt: timestamp("expires_at").notNull(),
-    createdAt: timestamp("created_at"),
-    updatedAt: timestamp("updated_at"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
 })
