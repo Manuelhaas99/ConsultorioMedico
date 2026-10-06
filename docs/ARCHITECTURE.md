@@ -63,7 +63,7 @@ lib/
 - Operaciones de varios pasos en una transacción (`db.transaction`).
 - La conexión a Postgres siempre verifica el certificado TLS (`lib/db/ssl.ts`): CA del sistema o `DATABASE_CA_CERT`. Solo se desactiva TLS de forma explícita (`DATABASE_SSL=disable` o `sslmode=disable`) para un Postgres local o de CI; `sslmode=no-verify` se rechaza.
 - Un solo `Pool` de `pg` por proceso (`lib/db/client.ts`): en desarrollo vive en `globalThis` para sobrevivir a las recargas en caliente. Pocas conexiones por instancia (`DATABASE_POOL_MAX`, 5 por defecto) y cierre de ociosas a los 10 s, pensado para serverless; en producción usa la URL con pooler del proveedor.
-- Cambios de esquema siempre con migración generada (`pnpm db:generate`) o SQL personalizado (`drizzle-kit generate --custom`); nunca `push` en producción ni editar migraciones ya aplicadas.
+- Mientras la app no esté en producción hay una sola migración, `0000_inicial.sql`. Un cambio de esquema la regenera: borra `lib/db/migrations`, corre `pnpm db:generate --name=inicial`, vuelve a agregar a mano la extensión `btree_gist` y la restricción de exclusión, y recrea la base. Nunca `drizzle-kit push`, porque no crea esas dos piezas. Al salir a producción, cada cambio será una migración nueva y no se editarán las ya aplicadas.
 
 ### UI (cuando se construya)
 

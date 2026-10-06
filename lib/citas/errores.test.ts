@@ -33,10 +33,9 @@ describe("esTraslapeDeCitas", () => {
     })
 })
 
-// 0003 recreó con tstzrange la restricción que 0001 creó con tsrange.
 describe("migración de la restricción de exclusión", () => {
     const sql = readFileSync(
-        fileURLToPath(new URL("../db/migrations/0003_zona_horaria_timestamptz.sql", import.meta.url)),
+        fileURLToPath(new URL("../db/migrations/0000_inicial.sql", import.meta.url)),
         "utf8",
     )
 

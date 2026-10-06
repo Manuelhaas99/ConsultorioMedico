@@ -1,5 +1,5 @@
 {
-  "id": "6bf88314-0fdb-4432-8055-56e6eac72af0",
+  "id": "0eb8281e-ef2d-4c43-a376-f9dbda055c65",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -52,13 +52,13 @@
         },
         "access_token_expires_at": {
           "name": "access_token_expires_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
         "refresh_token_expires_at": {
           "name": "refresh_token_expires_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -76,13 +76,13 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         }
@@ -128,13 +128,13 @@
         },
         "fecha_inicio": {
           "name": "fecha_inicio",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
         "fecha_fin": {
           "name": "fecha_fin",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
@@ -146,13 +146,29 @@
         },
         "creado_en": {
           "name": "creado_en",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "bloqueo_horario_doctor_id_idx": {
+          "name": "bloqueo_horario_doctor_id_idx",
+          "columns": [
+            {
+              "expression": "doctor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "bloqueo_horario_doctor_id_doctor_id_fk": {
           "name": "bloqueo_horario_doctor_id_doctor_id_fk",
@@ -171,7 +187,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "bloqueo_horario_fechas_validas": {
+          "name": "bloqueo_horario_fechas_validas",
+          "value": "\"bloqueo_horario\".\"fecha_fin\" > \"bloqueo_horario\".\"fecha_inicio\""
+        }
+      },
       "isRLSEnabled": false
     },
     "public.cita": {
@@ -229,13 +250,13 @@
         },
         "fecha_inicio": {
           "name": "fecha_inicio",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
         "fecha_fin": {
           "name": "fecha_fin",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
@@ -265,8 +286,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "token_gestion": {
-          "name": "token_gestion",
+        "token_gestion_hash": {
+          "name": "token_gestion_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -293,20 +314,57 @@
         },
         "creado_en": {
           "name": "creado_en",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "actualizado_en": {
           "name": "actualizado_en",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "cita_doctor_id_fecha_inicio_idx": {
+          "name": "cita_doctor_id_fecha_inicio_idx",
+          "columns": [
+            {
+              "expression": "doctor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "fecha_inicio",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cita_paciente_id_idx": {
+          "name": "cita_paciente_id_idx",
+          "columns": [
+            {
+              "expression": "paciente_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "cita_doctor_id_doctor_id_fk": {
           "name": "cita_doctor_id_doctor_id_fk",
@@ -363,16 +421,29 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "cita_token_gestion_unique": {
-          "name": "cita_token_gestion_unique",
+        "cita_token_gestion_hash_unique": {
+          "name": "cita_token_gestion_hash_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "token_gestion"
+            "token_gestion_hash"
           ]
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "cita_fechas_validas": {
+          "name": "cita_fechas_validas",
+          "value": "\"cita\".\"fecha_fin\" > \"cita\".\"fecha_inicio\""
+        },
+        "cita_token_gestion_hash_formato": {
+          "name": "cita_token_gestion_hash_formato",
+          "value": "\"cita\".\"token_gestion_hash\" ~ '^[0-9a-f]{64}$'"
+        },
+        "cita_paciente_o_invitado": {
+          "name": "cita_paciente_o_invitado",
+          "value": "\"cita\".\"paciente_id\" IS NOT NULL OR (coalesce(\"cita\".\"invitado_nombre\", '') <> '' AND coalesce(\"cita\".\"invitado_email\", '') <> '')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.disponibilidad_doctor": {
@@ -418,7 +489,23 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "disponibilidad_doctor_doctor_id_idx": {
+          "name": "disponibilidad_doctor_doctor_id_idx",
+          "columns": [
+            {
+              "expression": "doctor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "disponibilidad_doctor_doctor_id_doctor_id_fk": {
           "name": "disponibilidad_doctor_doctor_id_doctor_id_fk",
@@ -450,7 +537,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "disponibilidad_doctor_horas_validas": {
+          "name": "disponibilidad_doctor_horas_validas",
+          "value": "\"disponibilidad_doctor\".\"hora_fin\" > \"disponibilidad_doctor\".\"hora_inicio\""
+        }
+      },
       "isRLSEnabled": false
     },
     "public.doctor": {
@@ -509,7 +601,7 @@
         },
         "creado_en": {
           "name": "creado_en",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -546,6 +638,13 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
+        "doctor_usuario_id_unique": {
+          "name": "doctor_usuario_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "usuario_id"
+          ]
+        },
         "doctor_cedula_unique": {
           "name": "doctor_cedula_unique",
           "nullsNotDistinct": false,
@@ -583,7 +682,7 @@
         },
         "creado_en": {
           "name": "creado_en",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -630,13 +729,29 @@
         },
         "creado_en": {
           "name": "creado_en",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "secretario_doctor_id_idx": {
+          "name": "secretario_doctor_id_idx",
+          "columns": [
+            {
+              "expression": "doctor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "secretario_usuario_id_usuario_id_fk": {
           "name": "secretario_usuario_id_usuario_id_fk",
@@ -683,7 +798,7 @@
         },
         "expires_at": {
           "name": "expires_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
@@ -695,13 +810,13 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
@@ -786,13 +901,29 @@
         },
         "creado_en": {
           "name": "creado_en",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "tipo_consulta_doctor_id_idx": {
+          "name": "tipo_consulta_doctor_id_idx",
+          "columns": [
+            {
+              "expression": "doctor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "tipo_consulta_doctor_id_doctor_id_fk": {
           "name": "tipo_consulta_doctor_id_doctor_id_fk",
@@ -811,7 +942,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "tipo_consulta_duracion_positiva": {
+          "name": "tipo_consulta_duracion_positiva",
+          "value": "\"tipo_consulta\".\"duracion_minutos\" > 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.ubicacion": {
@@ -863,13 +999,29 @@
         },
         "creado_en": {
           "name": "creado_en",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "ubicacion_doctor_id_idx": {
+          "name": "ubicacion_doctor_id_idx",
+          "columns": [
+            {
+              "expression": "doctor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "ubicacion_doctor_id_doctor_id_fk": {
           "name": "ubicacion_doctor_id_doctor_id_fk",
@@ -949,14 +1101,14 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -1002,19 +1154,19 @@
         },
         "expires_at": {
           "name": "expires_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         }

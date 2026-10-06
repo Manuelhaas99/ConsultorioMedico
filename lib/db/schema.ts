@@ -156,7 +156,7 @@ export const secretario = pgTable("secretario", {
 
 // ── Cita ───────────────────────────────────────────
 // La restricción de exclusión `cita_sin_traslape_por_doctor` no se puede expresar
-// en Drizzle; vive en migraciones personalizadas.
+// en Drizzle; se agrega a mano en la migración inicial.
 export const cita = pgTable("cita", {
     id: uuid("id").primaryKey().defaultRandom(),
     doctorId: uuid("doctor_id")

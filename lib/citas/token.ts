@@ -15,7 +15,6 @@ export function generarTokenGestion(): { token: string; hash: string } {
     return { token, hash: hashTokenGestion(token) }
 }
 
-/** Acepta también el hexadecimal de 64 caracteres de los tokens emitidos antes de guardar solo el hash. */
 export const tokenGestionSchema = z
     .string({ error: "Falta el token de gestión" })
-    .regex(/^[A-Za-z0-9_-]{32,128}$/, { error: "El token de gestión no es válido" })
+    .regex(/^[A-Za-z0-9_-]{43}$/, { error: "El token de gestión no es válido" })

@@ -17,16 +17,9 @@ describe("token de gestión", () => {
         expect(hash).toBe(hashTokenGestion(token))
     })
 
-    it("coincide con sha256(convert_to(token, 'UTF8')) de Postgres (migración 0004)", () => {
-        // Valor calculado con: select encode(sha256(convert_to('abc', 'UTF8')), 'hex')
-        expect(hashTokenGestion("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
-        expect(hashTokenGestion("abc")).toBe(createHash("sha256").update("abc").digest("hex"))
-    })
-
-    it("acepta tokens nuevos y heredados (hex de 64) y rechaza otros textos", () => {
+    it("acepta solo tokens con el formato generado", () => {
         expect(tokenGestionSchema.safeParse(generarTokenGestion().token).success).toBe(true)
-        expect(tokenGestionSchema.safeParse("a".repeat(64)).success).toBe(true)
-        for (const malo of ["", "corto", "con espacios y más de treinta y dos caracteres", "x".repeat(129), "abc%2F".repeat(8)]) {
+        for (const malo of ["", "a".repeat(64), "corto", "con espacios y más de treinta y dos caracteres", "x".repeat(129), "abc%2F".repeat(8)]) {
             expect(tokenGestionSchema.safeParse(malo).success).toBe(false)
         }
     })
