@@ -50,10 +50,14 @@ describe("índices y restricciones", () => {
         ["bloqueo_horario", "bloqueo_horario_doctor_id_idx", ["doctor_id"]],
         ["ubicacion", "ubicacion_doctor_id_idx", ["doctor_id"]],
         ["tipo_consulta", "tipo_consulta_doctor_id_idx", ["doctor_id"]],
-        ["doctor", "doctor_usuario_id_idx", ["usuario_id"]],
         ["secretario", "secretario_doctor_id_idx", ["doctor_id"]],
     ])("%s tiene el índice %s", (tabla, indice, columnas) => {
         expect(columnasDeIndice(tabla, indice)).toEqual(columnas)
+    })
+
+    it("doctor.usuario_id es único", () => {
+        const unicas = configDe("doctor").columns.filter((c) => c.isUnique).map((c) => c.uniqueName)
+        expect(unicas).toContain("doctor_usuario_id_unique")
     })
 
     it.each([
