@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { registrarDoctorSchema } from "./schemas"
+import { listarDoctoresQuerySchema, registrarDoctorSchema } from "./schemas"
 
 const especialidadId = "6f1c1b7e-0000-4000-8000-000000000001"
 
@@ -20,5 +20,20 @@ describe("registrarDoctorSchema", () => {
         expect(registrarDoctorSchema.safeParse({ especialidadId, cedula: "<script>" }).success).toBe(false)
         expect(registrarDoctorSchema.safeParse({ especialidadId: "x", cedula: "1234567" }).success).toBe(false)
         expect(registrarDoctorSchema.safeParse({ cedula: 1234567, especialidadId }).success).toBe(false)
+    })
+})
+
+describe("listarDoctoresQuerySchema", () => {
+    it("acepta filtros vacíos", () => {
+        expect(listarDoctoresQuerySchema.parse({})).toEqual({})
+        expect(listarDoctoresQuerySchema.parse({ ciudad: "   " })).toEqual({ ciudad: undefined })
+    })
+
+    it("normaliza la ciudad y valida la especialidad", () => {
+        expect(listarDoctoresQuerySchema.parse({ especialidad: especialidadId, ciudad: " Puebla " })).toEqual({
+            especialidad: especialidadId,
+            ciudad: "Puebla",
+        })
+        expect(listarDoctoresQuerySchema.safeParse({ especialidad: "ortodoncia" }).success).toBe(false)
     })
 })

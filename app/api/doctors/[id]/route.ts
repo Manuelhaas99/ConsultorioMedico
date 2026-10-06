@@ -1,72 +1,22 @@
 import { NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db/client"
-import { doctor, usuario, especialidad, ubicacion, disponibilidadDoctor, tipoConsulta } from "@/lib/db/schema"
-import { eq } from "drizzle-orm"
+import { getSession } from "@/lib/auth/session"
+import { doctorIdSchema } from "@/lib/doctores/schemas"
+import { obtenerPerfilDoctor } from "@/lib/doctores/servicio"
+import { errorJson } from "@/lib/http"
 
-// GET /api/doctors/[id] — perfil completo del doctor
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_request: NextRequest, ctx: RouteContext<"/api/doctors/[id]">) {
     try {
-        const { id } = await params
-
-        const [doctorData] = await db
-            .select({
-                id: doctor.id,
-                bio: doctor.bio,
-                cedula: doctor.cedula,
-                aprobado: doctor.aprobado,
-                especialidadId: doctor.especialidadId,
-                especialidadNombre: especialidad.nombre,
-                nombre: usuario.name,
-                email: usuario.email,
-                imagen: usuario.image,
-            })
-            .from(doctor)
-            .innerJoin(usuario, eq(doctor.usuarioId, usuario.id))
-            .innerJoin(especialidad, eq(doctor.especialidadId, especialidad.id))
-            .where(eq(doctor.id, id))
-            .limit(1)
-
-        if (!doctorData) {
-            return NextResponse.json(
-                { message: "Doctor no encontrado" },
-                { status: 404 }
-            )
+        const id = doctorIdSchema.safeParse((await ctx.params).id)
+        if (!id.success) {
+            return errorJson(400, "Datos inválidos", { id: id.error.issues.map((i) => i.message) })
         }
 
-        // Obtener ubicaciones del doctor
-        const ubicaciones = await db
-            .select()
-            .from(ubicacion)
-            .where(eq(ubicacion.doctorId, id))
-
-        // Obtener disponibilidad del doctor
-        const disponibilidad = await db
-            .select()
-            .from(disponibilidadDoctor)
-            .where(eq(disponibilidadDoctor.doctorId, id))
-
-        // Obtener tipos de consulta
-        const tiposConsulta = await db
-            .select()
-            .from(tipoConsulta)
-            .where(eq(tipoConsulta.doctorId, id))
-
-        return NextResponse.json({
-            doctor: {
-                ...doctorData,
-                ubicaciones,
-                disponibilidad,
-                tiposConsulta,
-            },
-        })
+        const session = await getSession()
+        const resultado = await obtenerPerfilDoctor(id.data, session ? { usuarioId: session.user.id } : null)
+        if (!resultado.ok) return errorJson(404, "Doctor no encontrado")
+        return NextResponse.json({ doctor: resultado.data })
     } catch (error) {
         console.error(error)
-        return NextResponse.json(
-            { message: "Error al obtener doctor" },
-            { status: 500 }
-        )
+        return errorJson(500, "Error al obtener doctor")
     }
 }

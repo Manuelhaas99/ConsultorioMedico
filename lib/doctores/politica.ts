@@ -13,3 +13,22 @@ export function puedeAprobarDoctores(rol: Rol | null): boolean {
 export function rolTrasAprobacion(rolActual: Rol): Rol {
     return rolActual === "paciente" ? "medico" : rolActual
 }
+
+/**
+ * - `personal`: el doctor o sus secretarios; incluye datos internos como el motivo de los bloqueos.
+ * - `admin`: ve doctores sin aprobar, pero no los datos internos de su agenda.
+ * - `publica`: solo doctores aprobados.
+ */
+export type VistaDoctor = "publica" | "personal" | "admin"
+
+export type HechosVistaDoctor = {
+    esDueno: boolean
+    esSecretario: boolean
+    esAdmin: boolean
+}
+
+export function vistaDeDoctor(aprobado: boolean, hechos: HechosVistaDoctor): VistaDoctor | null {
+    if (hechos.esDueno || hechos.esSecretario) return "personal"
+    if (hechos.esAdmin) return "admin"
+    return aprobado ? "publica" : null
+}
