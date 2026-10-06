@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { ocupaHorario, seTraslapan } from "./intervalos"
+import { chocaConCitas, ocupaHorario, seTraslapan } from "./intervalos"
 
 const t = (hhmm: string) => new Date(`2026-10-12T${hhmm}:00.000Z`)
 const i = (a: string, b: string) => ({ inicio: t(a), fin: t(b) })
@@ -26,5 +26,31 @@ describe("ocupaHorario", () => {
         for (const estado of ["pendiente", "confirmada", "completada", "no_show"] as const) {
             expect(ocupaHorario(estado)).toBe(true)
         }
+    })
+})
+
+describe("chocaConCitas", () => {
+    const nueva = i("09:30", "10:00")
+
+    it("una cita contigua no choca", () => {
+        expect(chocaConCitas(nueva, [{ ...i("09:00", "09:30"), estado: "confirmada" }])).toBe(false)
+        expect(chocaConCitas(nueva, [{ ...i("10:00", "10:30"), estado: "pendiente" }])).toBe(false)
+    })
+
+    it("una cita cancelada en el mismo horario no choca", () => {
+        expect(chocaConCitas(nueva, [{ ...i("09:30", "10:00"), estado: "cancelada" }])).toBe(false)
+    })
+
+    it("una cita activa que traslapa choca", () => {
+        expect(chocaConCitas(nueva, [{ ...i("09:45", "10:15"), estado: "pendiente" }])).toBe(true)
+    })
+
+    it("choca si alguna de varias citas activas traslapa", () => {
+        const citas = [
+            { ...i("09:30", "10:00"), estado: "cancelada" as const },
+            { ...i("09:00", "09:30"), estado: "confirmada" as const },
+            { ...i("09:00", "10:00"), estado: "no_show" as const },
+        ]
+        expect(chocaConCitas(nueva, citas)).toBe(true)
     })
 })

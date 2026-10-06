@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db/client"
 import { cita, doctor, usuario, especialidad } from "@/lib/db/schema"
-import { eq, and, gte, lte } from "drizzle-orm"
+import { eq, and } from "drizzle-orm"
 import { getSession } from "@/lib/auth/session"
 import { randomBytes } from "crypto"
 import {enviarConfirmacionCita} from "@/lib/email/send";
 import {programarRecordatorios} from "@/lib/queue/reminders";
+import { reservarCita } from "@/lib/citas/servicio"
+import { errorJson } from "@/lib/http"
 
 // GET /api/appointments — lista de citas del usuario
 export async function GET(request: NextRequest) {
@@ -81,26 +83,6 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Verificar que el slot no está ocupado
-        const citaExistente = await db
-            .select()
-            .from(cita)
-            .where(
-                and(
-                    eq(cita.doctorId, doctorId),
-                    lte(cita.fechaInicio, new Date(fechaFin)),
-                    gte(cita.fechaFin, new Date(fechaInicio))
-                )
-            )
-            .limit(1)
-
-        if (citaExistente.length > 0) {
-            return NextResponse.json(
-                { message: "El horario seleccionado ya está ocupado" },
-                { status: 409 }
-            )
-        }
-
         // Obtener sesión si existe (usuario registrado)
         const session = await getSession()
 
@@ -115,23 +97,25 @@ export async function POST(request: NextRequest) {
         // Generar token de gestión para invitados
         const tokenGestion = randomBytes(32).toString("hex")
 
-        const [nuevaCita] = await db
-            .insert(cita)
-            .values({
-                doctorId,
-                pacienteId: session?.user.id ?? null,
-                ubicacionId: ubicacionId ?? null,
-                tipoConsultaId: tipoConsultaId ?? null,
-                invitadoNombre: session ? null : invitadoNombre,
-                invitadoEmail: session ? null : invitadoEmail,
-                invitadoTelefono: session ? null : (invitadoTelefono ?? null),
-                fechaInicio: new Date(fechaInicio),
-                fechaFin: new Date(fechaFin),
-                estado: "pendiente",
-                motivoConsulta: motivoConsulta ?? null,
-                tokenGestion,
-            })
-            .returning()
+        const reserva = await reservarCita({
+            doctorId,
+            pacienteId: session?.user.id ?? null,
+            ubicacionId: ubicacionId ?? null,
+            tipoConsultaId: tipoConsultaId ?? null,
+            invitadoNombre: session ? null : invitadoNombre,
+            invitadoEmail: session ? null : invitadoEmail,
+            invitadoTelefono: session ? null : (invitadoTelefono ?? null),
+            fechaInicio: new Date(fechaInicio),
+            fechaFin: new Date(fechaFin),
+            estado: "pendiente",
+            motivoConsulta: motivoConsulta ?? null,
+            tokenGestion,
+        })
+
+        if (!reserva.ok) {
+            return errorJson(409, "El horario seleccionado ya está ocupado")
+        }
+        const nuevaCita = reserva.cita
 
         // Enviar email de confirmación
         try {
