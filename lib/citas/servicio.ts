@@ -21,6 +21,7 @@ import { puedeEditar, puedeVer, rolEnCita, type CambiosCita, type ErrorEdicion, 
 import type { CrearCitaEntrada, SlotsQuery } from "./schemas"
 import { diaSemanaDeFecha, generarSlots, ventanaDeFranjas, type Slot } from "./slots"
 import { generarTokenGestion, hashTokenGestion } from "./token"
+import type { UbicacionCita } from "./ubicacion"
 import { ZONA_CONSULTORIO } from "./zona-horaria"
 
 export async function obtenerSlots(
@@ -80,7 +81,8 @@ export type ResultadoCrearCita =
     | {
           ok: true
           cita: CitaRegistrada
-          doctor: { nombre: string }
+          doctor: { nombre: string; especialidad: string }
+          ubicacion: UbicacionCita | null
           contacto: Contacto
           /** Solo se conoce aquí: la base guarda su hash. `null` con sesión. */
           tokenGestion: string | null
@@ -113,11 +115,11 @@ export async function crearCita(
 
     const ubicacionId = entrada.ubicacionId ?? null
     const tipoConsultaId = entrada.tipoConsultaId ?? null
-    const [ubicacionValida, tipo] = await Promise.all([
-        ubicacionId ? ubicacionDelDoctor(ubicacionId, doctor.id) : Promise.resolve(true),
+    const [ubicacion, tipo] = await Promise.all([
+        ubicacionId ? ubicacionDelDoctor(ubicacionId, doctor.id) : Promise.resolve(null),
         tipoConsultaId ? tipoConsultaDelDoctor(tipoConsultaId, doctor.id) : Promise.resolve(null),
     ])
-    if (!ubicacionValida) return { ok: false, error: "UBICACION_INVALIDA" }
+    if (ubicacion === undefined) return { ok: false, error: "UBICACION_INVALIDA" }
     if (tipo === undefined) return { ok: false, error: "TIPO_CONSULTA_INVALIDO" }
 
     const errorDuracion = validarDuracion(intervalo, tipo)
@@ -154,7 +156,8 @@ export async function crearCita(
     return {
         ok: true,
         cita: reserva.cita,
-        doctor: { nombre: doctor.nombre },
+        doctor: { nombre: doctor.nombre, especialidad: doctor.especialidad },
+        ubicacion,
         contacto,
         tokenGestion: token?.token ?? null,
     }

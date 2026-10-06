@@ -1,7 +1,21 @@
+import type { EstadoCita } from "@/lib/citas/intervalos"
 import { formatearIntervalo, ZONA_CONSULTORIO } from "@/lib/citas/zona-horaria"
 import { construirUrl, html, textoDeUnaLinea } from "./html"
 
+export type EstadoConfirmacion = Extract<EstadoCita, "pendiente" | "confirmada">
+
+export function textosConfirmacion(estado: EstadoConfirmacion): { titulo: string; mensaje: string } {
+    return estado === "pendiente"
+        ? {
+              titulo: "Recibimos tu solicitud de cita",
+              // No se promete avisar de cambios: hoy no existe ninguna notificación al cambiar el estado.
+              mensaje: "Registramos tu cita. Queda pendiente hasta que el consultorio la confirme.",
+          }
+        : { titulo: "Cita agendada", mensaje: "Tu cita quedó agendada y confirmada por el consultorio." }
+}
+
 type ConfirmacionCitaProps = {
+    estado: EstadoConfirmacion
     nombrePaciente: string
     nombreDoctor: string
     especialidad: string
@@ -15,6 +29,7 @@ type ConfirmacionCitaProps = {
 }
 
 export function templateConfirmacionCita({
+    estado,
     nombrePaciente,
     nombreDoctor,
     especialidad,
@@ -28,12 +43,13 @@ export function templateConfirmacionCita({
     const { fecha, horaInicio, horaFin } = formatearIntervalo(fechaInicio, fechaFin, zona)
 
     const linkGestion = tokenGestion ? construirUrl(baseUrl, "/cita", {}, { token: tokenGestion }) : null
+    const { titulo, mensaje } = textosConfirmacion(estado)
 
     return html`
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #2563eb;">Cita confirmada</h2>
+      <h2 style="color: #2563eb;">${titulo}</h2>
       <p>Hola <strong>${nombrePaciente}</strong>,</p>
-      <p>Tu cita ha sido agendada correctamente.</p>
+      <p>${mensaje}</p>
 
       <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <p><strong>Doctor:</strong> ${nombreDoctor}</p>
@@ -60,7 +76,7 @@ export function templateConfirmacionCita({
   `.toString()
 }
 
-type RecordatorioCitaProps = Omit<ConfirmacionCitaProps, "tokenGestion"> & {
+type RecordatorioCitaProps = Omit<ConfirmacionCitaProps, "tokenGestion" | "estado"> & {
     tiempoRestante: "24h" | "1h"
     citaId: string
     /** Sin enlace de gestión: la base solo guarda el hash del token. */
@@ -111,8 +127,8 @@ export function templateRecordatorioCita({
   `.toString()
 }
 
-export function asuntoConfirmacion(nombreDoctor: string): string {
-    return textoDeUnaLinea(`Cita confirmada con ${nombreDoctor}`)
+export function asuntoConfirmacion(nombreDoctor: string, estado: EstadoConfirmacion): string {
+    return textoDeUnaLinea(`${textosConfirmacion(estado).titulo} con ${nombreDoctor}`)
 }
 
 export function asuntoRecordatorio(nombreDoctor: string, tiempoRestante: "24h" | "1h"): string {

@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { asuntoConfirmacion, asuntoRecordatorio, templateConfirmacionCita, templateRecordatorioCita } from "./templates"
+import { asuntoConfirmacion, asuntoRecordatorio, templateConfirmacionCita, templateRecordatorioCita, textosConfirmacion } from "./templates"
 
 const base = {
+    estado: "pendiente" as const,
     nombrePaciente: "Ana",
     nombreDoctor: "Dra. López",
     especialidad: "Odontología",
@@ -68,7 +69,7 @@ describe("correos sin inyección de HTML", () => {
     })
 
     it("los asuntos son de una sola línea", () => {
-        expect(asuntoConfirmacion("Ana\r\nBcc: x@example.com")).toBe("Cita confirmada con Ana Bcc: x@example.com")
+        expect(asuntoConfirmacion("Ana\r\nBcc: x@example.com", "pendiente")).toBe("Recibimos tu solicitud de cita con Ana Bcc: x@example.com")
         expect(asuntoRecordatorio("Ana\n", "1h")).toBe("Recordatorio: cita con Ana en 1 hora")
     })
 })
@@ -96,5 +97,35 @@ describe("enlaces de gestión sin exponer el token", () => {
         expect(html).not.toContain("token")
         expect(html).not.toContain("<a ")
         expect(html).toContain("correo de confirmación")
+    })
+})
+
+describe("textos consistentes con el estado de la cita", () => {
+    it("una cita pendiente no se anuncia como confirmada", () => {
+        const html = templateConfirmacionCita(base)
+        expect(html).toContain("Recibimos tu solicitud de cita")
+        expect(html).not.toMatch(/confirmada/i)
+        expect(asuntoConfirmacion("Dra. López", "pendiente")).toBe("Recibimos tu solicitud de cita con Dra. López")
+    })
+
+    it("no promete avisos que el sistema no envía", () => {
+        expect(textosConfirmacion("pendiente").mensaje).not.toMatch(/avisaremos|te avisamos|notificaremos/i)
+        expect(textosConfirmacion("pendiente").mensaje).toMatch(/pendiente/i)
+    })
+
+    it("una cita confirmada se anuncia como agendada", () => {
+        expect(templateConfirmacionCita({ ...base, estado: "confirmada" })).toContain("Cita agendada")
+        expect(asuntoConfirmacion("Dra. López", "confirmada")).toBe("Cita agendada con Dra. López")
+        expect(textosConfirmacion("confirmada").titulo).toBe("Cita agendada")
+    })
+
+    it("muestra la especialidad y la dirección que se le pasan", () => {
+        const html = templateConfirmacionCita({ ...base, especialidad: "Ortodoncia", direccion: "Av. Juárez 10, CDMX" })
+        expect(html).toContain("<strong>Especialidad:</strong> Ortodoncia")
+        expect(html).toContain("<strong>Dirección:</strong> Av. Juárez 10, CDMX")
+    })
+
+    it("sin dirección no muestra la fila", () => {
+        expect(templateConfirmacionCita(base)).not.toContain("Dirección")
     })
 })

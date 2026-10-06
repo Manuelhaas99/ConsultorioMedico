@@ -32,6 +32,7 @@ export async function procesarRecordatorio(mensaje: MensajeRecordatorio): Promis
             especialidad: datos.especialidad,
             fechaInicio: datos.fechaInicio,
             fechaFin: datos.fechaFin,
+            direccion: datos.direccion ?? undefined,
             // Solo se guarda el hash del token: el recordatorio de un invitado no puede incluir su enlace.
             invitado: datos.invitado,
             tiempoRestante: mensaje.tipo,
