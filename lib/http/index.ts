@@ -23,9 +23,14 @@ function aResultado<T>(parsed: z.ZodSafeParseResult<T>): Resultado<T> {
 
 /** Lee y valida el cuerpo JSON de la petición. Devuelve 400 si no es JSON o no cumple el esquema. */
 export async function leerCuerpo<S extends z.ZodType>(request: Request, schema: S): Promise<Resultado<z.output<S>>> {
+    return leerJson(await request.text(), schema)
+}
+
+/** Para webhooks cuya firma se verifica sobre el cuerpo crudo. */
+export function leerJson<S extends z.ZodType>(texto: string, schema: S): Resultado<z.output<S>> {
     let json: unknown
     try {
-        json = await request.json()
+        json = JSON.parse(texto)
     } catch {
         return { ok: false, response: errorJson(400, "El cuerpo debe ser JSON válido") }
     }
@@ -36,4 +41,11 @@ export async function leerCuerpo<S extends z.ZodType>(request: Request, schema: 
 export function leerQuery<S extends z.ZodType>(request: Request, schema: S): Resultado<z.output<S>> {
     const params = Object.fromEntries(new URL(request.url).searchParams)
     return aResultado(schema.safeParse(params))
+}
+
+/** No valida el valor: quien lo usa debe hacerlo con su esquema. */
+export function tokenBearer(request: Request): string | null {
+    const cabecera = request.headers.get("authorization")
+    const coincidencia = cabecera?.match(/^Bearer[ ]+(\S+)[ ]*$/i)
+    return coincidencia?.[1] ?? null
 }

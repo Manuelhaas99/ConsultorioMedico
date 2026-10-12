@@ -1,13 +1,13 @@
+import "server-only"
 import { Client } from "@upstash/qstash"
+import { env } from "@/lib/env"
 
-let _client: Client | null = null
+let instancia: Client | null = null
 
-export function getQstashClient() {
-    if (!_client) {
-        _client = new Client({
-            token: process.env.QSTASH_TOKEN!,
-            baseUrl: process.env.QSTASH_URL,
-        })
+export function getQstashClient(): Client {
+    if (!instancia) {
+        const { QSTASH_TOKEN, QSTASH_URL } = env("qstashPublicacion")
+        instancia = new Client({ token: QSTASH_TOKEN, baseUrl: QSTASH_URL })
     }
-    return _client
+    return instancia
 }

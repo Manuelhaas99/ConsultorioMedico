@@ -16,3 +16,11 @@ export const ESTADOS_QUE_LIBERAN_HORARIO = ["cancelada"] as const satisfies read
 export function ocupaHorario(estado: EstadoCita): boolean {
     return !(ESTADOS_QUE_LIBERAN_HORARIO as readonly EstadoCita[]).includes(estado)
 }
+
+/** Las citas canceladas y las contiguas no chocan. */
+export function chocaConCitas(
+    intervalo: Intervalo,
+    citas: readonly (Intervalo & { estado: EstadoCita })[],
+): boolean {
+    return citas.some((c) => ocupaHorario(c.estado) && seTraslapan(intervalo, c))
+}

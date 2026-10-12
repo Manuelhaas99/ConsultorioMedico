@@ -24,17 +24,9 @@ jobs:
           --health-retries 10
     env:
       NEXT_TELEMETRY_DISABLED: 1
-      # La imagen oficial no habilita SSL; `sslmode` en la URL prevalece sobre la opción `ssl` del cliente.
+      # La imagen oficial no habilita SSL y, por defecto, el cliente exige TLS verificado.
       DATABASE_URL: postgres://ci:ci@localhost:5432/ci?sslmode=disable
-      # Valores falsos: el build no debe conectarse a servicios reales.
-      BETTER_AUTH_SECRET: ci-secret-no-usar-en-produccion-0123456789
-      BETTER_AUTH_URL: http://localhost:3000
-      RESEND_API_KEY: re_ci
-      QSTASH_TOKEN: ci
-      QSTASH_CURRENT_SIGNING_KEY: ci
-      QSTASH_NEXT_SIGNING_KEY: ci
-      GOOGLE_CLIENT_ID: ci
-      GOOGLE_CLIENT_SECRET: ci
+      DATABASE_SSL: disable
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

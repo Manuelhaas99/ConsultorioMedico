@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db/client"
-import { cita, doctor, usuario, especialidad } from "@/lib/db/schema"
-import { eq, and, gte, lte } from "drizzle-orm"
+import { cita } from "@/lib/db/schema"
+import { eq } from "drizzle-orm"
 import { getSession } from "@/lib/auth/session"
-import { randomBytes } from "crypto"
-import {enviarConfirmacionCita} from "@/lib/email/send";
-import {programarRecordatorios} from "@/lib/queue/reminders";
+import { crearCitaSchema } from "@/lib/citas/schemas"
+import { crearCita, type ErrorCrearCita } from "@/lib/citas/servicio"
+import { errorJson, leerCuerpo } from "@/lib/http"
+import { citaParaPaciente } from "@/lib/citas/dto"
+import { notificarCitaCreada } from "@/lib/citas/notificaciones"
 
 // GET /api/appointments — lista de citas del usuario
 export async function GET(request: NextRequest) {
@@ -23,7 +25,7 @@ export async function GET(request: NextRequest) {
             .from(cita)
             .where(eq(cita.pacienteId, session.user.id))
 
-        return NextResponse.json({ citas })
+        return NextResponse.json({ citas: citas.map(citaParaPaciente) })
     } catch (error) {
         console.error(error)
         return NextResponse.json(
@@ -33,148 +35,49 @@ export async function GET(request: NextRequest) {
     }
 }
 
+const RESPUESTAS_ERROR = {
+    RANGO_INVALIDO: [400, "La fecha de fin debe ser posterior a la de inicio"],
+    FECHA_EN_PASADO: [400, "La cita debe ser en una fecha y hora futura"],
+    DURACION_INVALIDA: [400, "La duración no coincide con el tipo de consulta o está fuera de los límites permitidos"],
+    DATOS_INVITADO_REQUERIDOS: [400, "Nombre y email son requeridos para reservar como invitado"],
+    UBICACION_INVALIDA: [400, "La ubicación no pertenece a este doctor"],
+    TIPO_CONSULTA_INVALIDO: [400, "El tipo de consulta no pertenece a este doctor"],
+    DOCTOR_NO_ENCONTRADO: [404, "Doctor no encontrado o no aprobado"],
+    FUERA_DE_DISPONIBILIDAD: [409, "El horario está fuera de la disponibilidad del doctor"],
+    HORARIO_BLOQUEADO: [409, "El doctor no atiende en ese horario"],
+    HORARIO_OCUPADO: [409, "El horario seleccionado ya está ocupado"],
+} as const satisfies Record<ErrorCrearCita, readonly [number, string]>
+
 // POST /api/appointments — crear cita
 export async function POST(request: NextRequest) {
+    const cuerpo = await leerCuerpo(request, crearCitaSchema)
+    if (!cuerpo.ok) return cuerpo.response
+
     try {
-        const body = await request.json()
-        const {
-            doctorId,
-            fechaInicio,
-            fechaFin,
-            ubicacionId,
-            tipoConsultaId,
-            motivoConsulta,
-            // Para invitados
-            invitadoNombre,
-            invitadoEmail,
-            invitadoTelefono,
-        } = body
-
-
-        if (!doctorId || !fechaInicio || !fechaFin) {
-            return NextResponse.json(
-                { message: "Doctor, fecha inicio y fecha fin son requeridos" },
-                { status: 400 }
-            )
-        }
-
-        // Verificar que el doctor existe y está aprobado
-        const [doctorData] = await db
-            .select({
-                id: doctor.id,
-                aprobado: doctor.aprobado,
-                usuarioId: doctor.usuarioId,
-                nombre: usuario.name,
-                especialidadNombre: especialidad.nombre,
-            })
-            .from(doctor)
-            .innerJoin(usuario, eq(doctor.usuarioId, usuario.id))
-            .innerJoin(especialidad, eq(doctor.especialidadId, especialidad.id))
-            .where(and(eq(doctor.id, doctorId), eq(doctor.aprobado, true)))
-            .limit(1)
-
-
-        if (!doctorData) {
-            return NextResponse.json(
-                { message: "Doctor no encontrado o no aprobado" },
-                { status: 404 }
-            )
-        }
-
-        // Verificar que el slot no está ocupado
-        const citaExistente = await db
-            .select()
-            .from(cita)
-            .where(
-                and(
-                    eq(cita.doctorId, doctorId),
-                    lte(cita.fechaInicio, new Date(fechaFin)),
-                    gte(cita.fechaFin, new Date(fechaInicio))
-                )
-            )
-            .limit(1)
-
-        if (citaExistente.length > 0) {
-            return NextResponse.json(
-                { message: "El horario seleccionado ya está ocupado" },
-                { status: 409 }
-            )
-        }
-
-        // Obtener sesión si existe (usuario registrado)
         const session = await getSession()
-
-        // Validar que si no hay sesión, hay datos de invitado
-        if (!session && (!invitadoNombre || !invitadoEmail)) {
-            return NextResponse.json(
-                { message: "Nombre y email son requeridos para reservar como invitado" },
-                { status: 400 }
-            )
+        const usuario = session
+            ? { id: session.user.id, name: session.user.name, email: session.user.email }
+            : null
+        const resultado = await crearCita(cuerpo.data, { usuario })
+        if (!resultado.ok) {
+            const [status, message] = RESPUESTAS_ERROR[resultado.error]
+            return errorJson(status, message)
         }
+        const { cita: nuevaCita } = resultado
 
-        // Generar token de gestión para invitados
-        const tokenGestion = randomBytes(32).toString("hex")
-
-        const [nuevaCita] = await db
-            .insert(cita)
-            .values({
-                doctorId,
-                pacienteId: session?.user.id ?? null,
-                ubicacionId: ubicacionId ?? null,
-                tipoConsultaId: tipoConsultaId ?? null,
-                invitadoNombre: session ? null : invitadoNombre,
-                invitadoEmail: session ? null : invitadoEmail,
-                invitadoTelefono: session ? null : (invitadoTelefono ?? null),
-                fechaInicio: new Date(fechaInicio),
-                fechaFin: new Date(fechaFin),
-                estado: "pendiente",
-                motivoConsulta: motivoConsulta ?? null,
-                tokenGestion,
-            })
-            .returning()
-
-        // Enviar email de confirmación
-        try {
-            await enviarConfirmacionCita({
-                email: session?.user.email ?? invitadoEmail,
-                nombrePaciente: session?.user.name ?? invitadoNombre,
-                nombreDoctor: doctorData.nombre ?? "Doctor",
-                especialidad: "Odontología",
-                fechaInicio: new Date(fechaInicio),
-                fechaFin: new Date(fechaFin),
-                tokenGestion: nuevaCita.tokenGestion ?? undefined,
-            })
-        } catch (emailError) {
-            console.error("Error enviando email:", emailError)
-            // No fallamos la cita si el email falla
-        }
-
-        // Programar recordatorios
-        try {
-            await programarRecordatorios({
-                citaId: nuevaCita.id,
-                fechaInicio: new Date(fechaInicio),
-                emailPaciente: session?.user.email ?? invitadoEmail,
-            })
-        } catch (qstashError) {
-            console.error("Error programando recordatorios:", qstashError)
-            // No fallamos la cita si QStash falla
-        }
+        await notificarCitaCreada(resultado)
 
         return NextResponse.json(
             {
                 message: "Cita agendada correctamente",
-                cita: nuevaCita,
-                tokenGestion // para que el invitado pueda gestionar su cita
+                cita: citaParaPaciente(nuevaCita),
+                // Única vez que se entrega el token en claro (solo invitados); la base guarda su hash.
+                ...(resultado.tokenGestion && { tokenGestion: resultado.tokenGestion }),
             },
             { status: 201 }
         )
     } catch (error) {
         console.error(error)
-        return NextResponse.json(
-            { message: "Error al crear cita" },
-            { status: 500 }
-        )
+        return errorJson(500, "Error al crear cita")
     }
 }
-
