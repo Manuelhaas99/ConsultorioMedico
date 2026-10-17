@@ -3,11 +3,19 @@ import { env } from "@/lib/env"
 import { getResend } from "./client"
 import { resolverRemitente } from "./remitente"
 import {
+    asuntoCodigo,
     asuntoConfirmacion,
+    asuntoEnlaceAcceso,
     asuntoRecordatorio,
+    enlaceDeLaApp,
+    templateCodigo,
     templateConfirmacionCita,
+    templateEnlaceAcceso,
     templateRecordatorioCita,
+    textoCodigo,
+    textoEnlaceAcceso,
     type EstadoConfirmacion,
+    type PropositoCodigo,
 } from "./templates"
 
 /** Resend no lanza: devuelve `{ error }`. */
@@ -18,12 +26,12 @@ export class EnvioCorreoError extends Error {
     }
 }
 
-type CorreoSaliente = { to: string; subject: string; html: string; idempotencyKey?: string }
+type CorreoSaliente = { to: string; subject: string; html: string; text?: string; idempotencyKey?: string }
 
-async function enviar({ to, subject, html, idempotencyKey }: CorreoSaliente): Promise<{ id: string }> {
+async function enviar({ to, subject, html, text, idempotencyKey }: CorreoSaliente): Promise<{ id: string }> {
     const from = resolverRemitente(env("correo"))
     const { data, error } = await getResend().emails.send(
-        { from, to, subject, html },
+        { from, to, subject, html, ...(text ? { text } : {}) },
         idempotencyKey ? { idempotencyKey } : undefined,
     )
     if (error) throw new EnvioCorreoError(`Resend rechazó el correo: ${error.message}`)
@@ -108,5 +116,34 @@ export async function enviarRecordatorioCita({
             citaId,
         }),
         idempotencyKey,
+    })
+}
+
+export async function enviarCodigo({
+    email,
+    codigo,
+    proposito,
+    minutosVigencia,
+}: {
+    email: string
+    codigo: string
+    proposito: PropositoCodigo
+    minutosVigencia: number
+}) {
+    return enviar({
+        to: email,
+        subject: asuntoCodigo(proposito),
+        html: templateCodigo({ codigo, proposito, minutosVigencia }),
+        text: textoCodigo({ codigo, proposito, minutosVigencia }),
+    })
+}
+
+export async function enviarEnlaceAcceso({ email, url, minutosVigencia }: { email: string; url: string; minutosVigencia: number }) {
+    if (!enlaceDeLaApp(url)) throw new EnvioCorreoError("El enlace de acceso no es del origen de la app")
+    return enviar({
+        to: email,
+        subject: asuntoEnlaceAcceso(),
+        html: templateEnlaceAcceso({ url, minutosVigencia }),
+        text: textoEnlaceAcceso({ url, minutosVigencia }),
     })
 }
