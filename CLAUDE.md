@@ -12,7 +12,7 @@ pnpm install          # usar siempre pnpm (no npm ni yarn)
 pnpm dev              # servidor de desarrollo
 pnpm lint             # ESLint (next/core-web-vitals + typescript)
 pnpm typecheck        # next typegen && tsc --noEmit
-pnpm test             # Vitest (archivos *.test.ts junto al código)
+pnpm test             # Vitest (archivos *.test.ts en `tests/`, misma ruta que el código)
 pnpm build            # build de producción
 pnpm db:generate      # generar migración desde lib/db/schema.ts
 pnpm db:migrate       # aplicar migraciones
