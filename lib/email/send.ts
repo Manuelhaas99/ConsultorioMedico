@@ -63,6 +63,7 @@ export async function enviarConfirmacionCita({
             fechaFin,
             direccion,
             tokenGestion,
+            baseUrl: env("app").BETTER_AUTH_URL,
         }),
     })
 }
@@ -106,6 +107,7 @@ export async function enviarRecordatorioCita({
             invitado,
             tiempoRestante,
             citaId,
+            baseUrl: env("app").BETTER_AUTH_URL,
         }),
         idempotencyKey,
     })

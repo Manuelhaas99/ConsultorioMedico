@@ -15,6 +15,8 @@ Antes de esta guía la lógica de negocio, las consultas y la autorización viv�
 ## Arquitectura objetivo: capas por módulo de dominio
 
 ```
+tests/                       ← Pruebas Vitest; reflejan la ruta del código (tests/lib/citas/slots.test.ts)
+
 app/                         ← Capa HTTP / UI (delgada)
   api/<recurso>/route.ts       parsea entrada, llama al servicio, traduce a HTTP
   (staff)/..., (publico)/...   páginas (Server Components por defecto)
