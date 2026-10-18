@@ -24,8 +24,7 @@ type ConfirmacionCitaProps = {
     direccion?: string
     tokenGestion?: string
     zona?: string
-    /** Por defecto `BETTER_AUTH_URL`. */
-    baseUrl?: string
+    baseUrl: string
 }
 
 export function templateConfirmacionCita({
@@ -38,7 +37,7 @@ export function templateConfirmacionCita({
     direccion,
     tokenGestion,
     zona = ZONA_CONSULTORIO,
-    baseUrl = process.env.BETTER_AUTH_URL,
+    baseUrl,
 }: ConfirmacionCitaProps): string {
     const { fecha, horaInicio, horaFin } = formatearIntervalo(fechaInicio, fechaFin, zona)
 
@@ -93,7 +92,7 @@ export function templateRecordatorioCita({
     invitado,
     tiempoRestante,
     zona = ZONA_CONSULTORIO,
-    baseUrl = process.env.BETTER_AUTH_URL,
+    baseUrl,
 }: RecordatorioCitaProps): string {
     const { fecha, horaInicio } = formatearIntervalo(fechaInicio, fechaFin, zona)
 

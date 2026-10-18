@@ -8,6 +8,7 @@ const base = {
     especialidad: "Odontología",
     fechaInicio: new Date("2026-10-12T15:00:00.000Z"),
     fechaFin: new Date("2026-10-12T15:30:00.000Z"),
+    baseUrl: "https://citas.example",
 }
 
 const tzOriginal = process.env.TZ
@@ -39,7 +40,6 @@ describe("correos sin inyección de HTML", () => {
         nombreDoctor: "Dr. <script>alert(1)</script>",
         especialidad: "<img src=x onerror=alert(1)>",
         direccion: '"><b>Calle</b>',
-        baseUrl: "https://citas.example",
     }
 
     it("la confirmación escapa todos los datos interpolados", () => {
