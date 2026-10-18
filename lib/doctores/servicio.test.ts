@@ -13,12 +13,22 @@ vi.mock("./repositorio", () => ({
     filasPerfil: vi.fn(),
     disponibilidadDe: vi.fn(),
     bloqueosDe: vi.fn(),
+    ubicacionEsDeDoctor: vi.fn(),
+    insertarDisponibilidad: vi.fn(),
+    insertarBloqueo: vi.fn(),
 }))
 
 const { rolDeUsuario } = await import("@/lib/auth/repositorio")
 const repositorio = await import("./repositorio")
-const { aprobarDoctor, listarDoctores, obtenerBloqueos, obtenerDisponibilidad, obtenerPerfilDoctor, registrarDoctor } =
-    await import("./servicio")
+const {
+    aprobarDoctor,
+    crearBloqueo,
+    crearDisponibilidad,
+    listarDoctores, obtenerBloqueos,
+    obtenerDisponibilidad,
+    obtenerPerfilDoctor,
+    registrarDoctor,
+} = await import("./servicio")
 
 const fila: FilaDoctor = {
     id: "6f1c1b7e-0000-4000-8000-0000000000d1",
@@ -209,5 +219,81 @@ describe("visibilidad de un doctor", () => {
 
         expect(repositorio.bloqueosDe).toHaveBeenCalledWith(fila.id, undefined)
         expect(r).toMatchObject({ ok: true, data: [{ motivo: "Cita médica personal" }] })
+    })
+})
+
+describe("gestión de la agenda", () => {
+    const sinRelacion = { esDueno: false, esSecretario: false }
+    const ubicacionId = "6f1c1b7e-0000-4000-8000-0000000000f1"
+    const entradaDisponibilidad = {
+        diaSemana: "lunes",
+        horaInicio: "09:00:00",
+        horaFin: "14:00:00",
+        ubicacionId,
+    } as const
+    const filaDisponibilidad = { id: "d1", doctorId: fila.id, ...entradaDisponibilidad }
+    const entradaBloqueo = {
+        fechaInicio: new Date("2026-10-12T15:00:00Z"),
+        fechaFin: new Date("2026-10-12T17:00:00Z"),
+        motivo: "Congreso",
+    }
+
+    it("el dueño crea disponibilidad en una ubicación propia", async () => {
+        vi.mocked(repositorio.relacionConDoctor).mockResolvedValue({ aprobado: false, esDueno: true, esSecretario: false })
+        vi.mocked(rolDeUsuario).mockResolvedValue("medico")
+        vi.mocked(repositorio.ubicacionEsDeDoctor).mockResolvedValue(true)
+        vi.mocked(repositorio.insertarDisponibilidad).mockResolvedValue(filaDisponibilidad)
+
+        const r = await crearDisponibilidad(fila.id, entradaDisponibilidad, { usuarioId: "u1" })
+
+        expect(r).toEqual({ ok: true, disponibilidad: { id: "d1", ...entradaDisponibilidad } })
+        expect(repositorio.insertarDisponibilidad).toHaveBeenCalledWith({ doctorId: fila.id, ...entradaDisponibilidad })
+    })
+
+    it("un secretario del doctor también puede gestionar la agenda", async () => {
+        vi.mocked(repositorio.relacionConDoctor).mockResolvedValue({ aprobado: true, esDueno: false, esSecretario: true })
+        vi.mocked(rolDeUsuario).mockResolvedValue("secretario")
+        vi.mocked(repositorio.insertarBloqueo).mockResolvedValue({
+            id: "b1",
+            doctorId: fila.id,
+            ...entradaBloqueo,
+            creadoEn: new Date(),
+        })
+
+        expect(await crearBloqueo(fila.id, entradaBloqueo, { usuarioId: "s1" })).toMatchObject({ ok: true })
+    })
+
+    it("rechaza una ubicación de otro doctor sin insertar", async () => {
+        vi.mocked(repositorio.relacionConDoctor).mockResolvedValue({ aprobado: true, esDueno: true, esSecretario: false })
+        vi.mocked(rolDeUsuario).mockResolvedValue("medico")
+        vi.mocked(repositorio.ubicacionEsDeDoctor).mockResolvedValue(false)
+
+        expect(await crearDisponibilidad(fila.id, entradaDisponibilidad, { usuarioId: "u1" })).toEqual({
+            ok: false,
+            error: "UBICACION_INVALIDA",
+        })
+        expect(repositorio.insertarDisponibilidad).not.toHaveBeenCalled()
+    })
+
+    it("un paciente o un admin no pueden modificar la agenda", async () => {
+        vi.mocked(repositorio.relacionConDoctor).mockResolvedValue({ aprobado: true, ...sinRelacion })
+
+        vi.mocked(rolDeUsuario).mockResolvedValue("paciente")
+        expect(await crearBloqueo(fila.id, entradaBloqueo, { usuarioId: "u9" })).toEqual({ ok: false, error: "NO_AUTORIZADO" })
+
+        vi.mocked(rolDeUsuario).mockResolvedValue("admin")
+        expect(await crearDisponibilidad(fila.id, entradaDisponibilidad, { usuarioId: "a1" })).toEqual({
+            ok: false,
+            error: "NO_AUTORIZADO",
+        })
+        expect(repositorio.insertarBloqueo).not.toHaveBeenCalled()
+        expect(repositorio.insertarDisponibilidad).not.toHaveBeenCalled()
+    })
+
+    it("un doctor sin aprobar es 404 para quien no es su personal", async () => {
+        vi.mocked(repositorio.relacionConDoctor).mockResolvedValue({ aprobado: false, ...sinRelacion })
+        vi.mocked(rolDeUsuario).mockResolvedValue("paciente")
+
+        expect(await crearBloqueo(fila.id, entradaBloqueo, { usuarioId: "u9" })).toEqual({ ok: false, error: "NO_ENCONTRADO" })
     })
 })
