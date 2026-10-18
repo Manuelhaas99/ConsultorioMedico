@@ -32,3 +32,7 @@ export function vistaDeDoctor(aprobado: boolean, hechos: HechosVistaDoctor): Vis
     if (hechos.esAdmin) return "admin"
     return aprobado ? "publica" : null
 }
+
+export function puedeGestionarAgenda(vista: VistaDoctor | null): boolean {
+    return vista === "personal"
+}

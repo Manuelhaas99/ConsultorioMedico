@@ -2,6 +2,7 @@ import "server-only"
 import { rolDeUsuario } from "@/lib/auth/repositorio"
 import {
     bloqueoParaVista,
+    bloqueoPersonal,
     disponibilidadPublica,
     doctorPropio,
     doctorPublico,
@@ -14,7 +15,13 @@ import {
     type PerfilDoctorDto,
 } from "./dto"
 import { conflictoDeDoctor, type ConflictoDoctor } from "./errores"
-import { puedeAprobarDoctores, puedeSolicitarRegistro, vistaDeDoctor, type VistaDoctor } from "./politica"
+import {
+    puedeAprobarDoctores,
+    puedeGestionarAgenda,
+    puedeSolicitarRegistro,
+    vistaDeDoctor,
+    type VistaDoctor,
+} from "./politica"
 import {
     aprobarDoctorYAsignarRol,
     bloqueosDe,
@@ -23,10 +30,18 @@ import {
     doctorPorCedula,
     doctoresAprobados,
     filasPerfil,
+    insertarBloqueo,
+    insertarDisponibilidad,
     insertarDoctor,
     relacionConDoctor,
+    ubicacionEsDeDoctor,
 } from "./repositorio"
-import type { ListarDoctoresQuery, RegistrarDoctorEntrada } from "./schemas"
+import type {
+    CrearBloqueoEntrada,
+    CrearDisponibilidadEntrada,
+    ListarDoctoresQuery,
+    RegistrarDoctorEntrada,
+} from "./schemas"
 import type { Rol } from "@/lib/auth/roles"
 
 export type Actor = { usuarioId: string }
@@ -126,4 +141,62 @@ export async function obtenerBloqueos(
     if (!vista) return { ok: false, error: "NO_ENCONTRADO" }
     const filas = await bloqueosDe(doctorId, vista === "personal" ? undefined : ahora)
     return { ok: true, data: filas.map((b) => bloqueoParaVista(b, vista)) }
+}
+
+export type ErrorGestionarAgenda = "NO_ENCONTRADO" | "NO_AUTORIZADO"
+
+export type ErrorCrearDisponibilidad = ErrorGestionarAgenda | "UBICACION_INVALIDA"
+
+export type ResultadoCrearDisponibilidad =
+    | { ok: true; disponibilidad: DisponibilidadPublicaDto }
+    | { ok: false; error: ErrorCrearDisponibilidad }
+
+async function autorizarAgenda(doctorId: string, actor: Actor): Promise<ErrorGestionarAgenda | null> {
+    const vista = await vistaPara(doctorId, actor)
+    if (!vista) return "NO_ENCONTRADO"
+    return puedeGestionarAgenda(vista) ? null : "NO_AUTORIZADO"
+}
+
+export async function crearDisponibilidad(
+    doctorId: string,
+    entrada: CrearDisponibilidadEntrada,
+    actor: Actor,
+): Promise<ResultadoCrearDisponibilidad> {
+    const denegado = await autorizarAgenda(doctorId, actor)
+    if (denegado) return { ok: false, error: denegado }
+
+    const ubicacionId = entrada.ubicacionId ?? null
+    if (ubicacionId && !(await ubicacionEsDeDoctor(doctorId, ubicacionId))) {
+        return { ok: false, error: "UBICACION_INVALIDA" }
+    }
+
+    const fila = await insertarDisponibilidad({
+        doctorId,
+        diaSemana: entrada.diaSemana,
+        horaInicio: entrada.horaInicio,
+        horaFin: entrada.horaFin,
+        ubicacionId,
+    })
+    return { ok: true, disponibilidad: disponibilidadPublica(fila) }
+}
+
+export type ResultadoCrearBloqueo =
+    | { ok: true; bloqueo: BloqueoPersonalDto }
+    | { ok: false; error: ErrorGestionarAgenda }
+
+export async function crearBloqueo(
+    doctorId: string,
+    entrada: CrearBloqueoEntrada,
+    actor: Actor,
+): Promise<ResultadoCrearBloqueo> {
+    const denegado = await autorizarAgenda(doctorId, actor)
+    if (denegado) return { ok: false, error: denegado }
+
+    const fila = await insertarBloqueo({
+        doctorId,
+        fechaInicio: entrada.fechaInicio,
+        fechaFin: entrada.fechaFin,
+        motivo: entrada.motivo ?? null,
+    })
+    return { ok: true, bloqueo: bloqueoPersonal(fila) }
 }
