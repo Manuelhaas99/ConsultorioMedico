@@ -5,6 +5,7 @@ import {
     bloqueosQueTraslapan,
     citaPorId,
     citaPorTokenHash,
+    citasDePaciente,
     citasQueTraslapan,
     esPersonalDelDoctor,
     doctorReservable,
@@ -192,6 +193,10 @@ async function citaConAcceso(acceso: AccesoCita): Promise<CitaConRol | null> {
     const esPersonal = await esPersonalDelDoctor(acceso.usuarioId, fila.doctorId)
     const rol = rolEnCita(fila, { usuarioId: acceso.usuarioId, esPersonal, tokenValido: false })
     return puedeVer(rol) ? { cita: fila, rol } : null
+}
+
+export function listarCitasDePaciente(usuarioId: string): Promise<CitaRegistrada[]> {
+    return citasDePaciente(usuarioId)
 }
 
 export type ResultadoObtenerCita = ({ ok: true } & CitaConRol) | { ok: false; error: "NO_ENCONTRADA" }

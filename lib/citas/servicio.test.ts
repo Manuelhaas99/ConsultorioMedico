@@ -15,11 +15,12 @@ vi.mock("./repositorio", () => ({
     esPersonalDelDoctor: vi.fn(),
     actualizarCitaSiEstado: vi.fn(),
     citaPorTokenHash: vi.fn(),
+    citasDePaciente: vi.fn(),
 }))
 
 const repositorio = await import("./repositorio")
 const { hashTokenGestion } = await import("./token")
-const { actualizarCita, cancelarCita, crearCita, obtenerCita, reservarCita } = await import("./servicio")
+const { actualizarCita, cancelarCita, crearCita, listarCitasDePaciente, obtenerCita, reservarCita } = await import("./servicio")
 
 const valores: NuevaCita = {
     doctorId: "6f1c1b7e-0000-4000-8000-000000000001",
@@ -316,5 +317,15 @@ describe("obtenerCita / actualizarCita / cancelarCita", () => {
     it("cancelar una cita ya cancelada no es posible para el paciente", async () => {
         vi.mocked(repositorio.citaPorId).mockResolvedValue({ ...existente, estado: "cancelada" })
         await expect(cancelarCita(paciente, ahora)).resolves.toEqual({ ok: false, error: "CITA_NO_EDITABLE" })
+    })
+})
+
+describe("listarCitasDePaciente", () => {
+    it("pide solo las citas del usuario indicado", async () => {
+        const propia = { id: "c1" } as CitaRegistrada
+        vi.mocked(repositorio.citasDePaciente).mockResolvedValue([propia])
+
+        expect(await listarCitasDePaciente("u1")).toEqual([propia])
+        expect(repositorio.citasDePaciente).toHaveBeenCalledWith("u1")
     })
 })
