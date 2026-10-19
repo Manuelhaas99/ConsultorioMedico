@@ -24,8 +24,7 @@ type ConfirmacionCitaProps = {
     direccion?: string
     tokenGestion?: string
     zona?: string
-    /** Por defecto `BETTER_AUTH_URL`. */
-    baseUrl?: string
+    baseUrl: string
 }
 
 export function templateConfirmacionCita({
@@ -38,7 +37,7 @@ export function templateConfirmacionCita({
     direccion,
     tokenGestion,
     zona = ZONA_CONSULTORIO,
-    baseUrl = process.env.BETTER_AUTH_URL,
+    baseUrl,
 }: ConfirmacionCitaProps): string {
     const { fecha, horaInicio, horaFin } = formatearIntervalo(fechaInicio, fechaFin, zona)
 
@@ -93,7 +92,7 @@ export function templateRecordatorioCita({
     invitado,
     tiempoRestante,
     zona = ZONA_CONSULTORIO,
-    baseUrl = process.env.BETTER_AUTH_URL,
+    baseUrl,
 }: RecordatorioCitaProps): string {
     const { fecha, horaInicio } = formatearIntervalo(fechaInicio, fechaFin, zona)
 
@@ -210,8 +209,7 @@ export function textoCodigo({ codigo, proposito, minutosVigencia }: CorreoCodigo
 type CorreoEnlaceProps = {
     url: string
     minutosVigencia: number
-    /** Por defecto `BETTER_AUTH_URL`. */
-    baseUrl?: string
+    baseUrl: string
 }
 
 const TEXTOS_ENLACE = {
@@ -230,9 +228,9 @@ function vigenciaEnlace(minutosVigencia: number): string {
 }
 
 /** Devuelve `null` si la URL no es http(s), no es del origen de la app o trae credenciales. */
-export function enlaceDeLaApp(url: string, baseUrl: string | undefined = process.env.BETTER_AUTH_URL): string | null {
+export function enlaceDeLaApp(url: string, baseUrl: string): string | null {
     const enlace = construirUrl(baseUrl, url)
-    if (!enlace || !baseUrl) return null
+    if (!enlace) return null
     const destino = new URL(enlace)
     if (destino.username || destino.password) return null
     return destino.origin === new URL(baseUrl).origin ? enlace : null
@@ -242,7 +240,7 @@ export function asuntoEnlaceAcceso(): string {
     return textoDeUnaLinea(TEXTOS_ENLACE.asunto)
 }
 
-export function templateEnlaceAcceso({ url, minutosVigencia, baseUrl = process.env.BETTER_AUTH_URL }: CorreoEnlaceProps): string {
+export function templateEnlaceAcceso({ url, minutosVigencia, baseUrl }: CorreoEnlaceProps): string {
     const enlace = enlaceDeLaApp(url, baseUrl)
 
     return html`
@@ -267,7 +265,7 @@ export function templateEnlaceAcceso({ url, minutosVigencia, baseUrl = process.e
   `.toString()
 }
 
-export function textoEnlaceAcceso({ url, minutosVigencia, baseUrl = process.env.BETTER_AUTH_URL }: CorreoEnlaceProps): string {
+export function textoEnlaceAcceso({ url, minutosVigencia, baseUrl }: CorreoEnlaceProps): string {
     const enlace = enlaceDeLaApp(url, baseUrl)
     const cuerpo = enlace ? [TEXTOS_ENLACE.introTexto, enlace, vigenciaEnlace(minutosVigencia)] : [TEXTOS_ENLACE.sinEnlace]
     return [TEXTOS_ENLACE.titulo, ...cuerpo, TEXTOS_ENLACE.aviso].join("\n\n")

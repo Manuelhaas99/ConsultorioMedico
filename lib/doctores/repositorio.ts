@@ -142,3 +142,27 @@ export async function bloqueosDe(
         .where(and(...condiciones))
         .orderBy(asc(bloqueoHorario.fechaInicio))
 }
+
+export async function ubicacionEsDeDoctor(doctorId: string, ubicacionId: string): Promise<boolean> {
+    const [fila] = await db
+        .select({ id: ubicacion.id })
+        .from(ubicacion)
+        .where(and(eq(ubicacion.id, ubicacionId), eq(ubicacion.doctorId, doctorId)))
+        .limit(1)
+    return fila !== undefined
+}
+
+export type NuevaDisponibilidad = typeof disponibilidadDoctor.$inferInsert
+export type NuevoBloqueo = typeof bloqueoHorario.$inferInsert
+
+export async function insertarDisponibilidad(valores: NuevaDisponibilidad): Promise<typeof disponibilidadDoctor.$inferSelect> {
+    const [fila] = await db.insert(disponibilidadDoctor).values(valores).returning()
+    if (!fila) throw new Error("La inserción de disponibilidad no devolvió filas")
+    return fila
+}
+
+export async function insertarBloqueo(valores: NuevoBloqueo): Promise<typeof bloqueoHorario.$inferSelect> {
+    const [fila] = await db.insert(bloqueoHorario).values(valores).returning()
+    if (!fila) throw new Error("La inserción del bloqueo no devolvió filas")
+    return fila
+}

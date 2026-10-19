@@ -9,10 +9,12 @@ Sistema de citas para consultorios dentales (México). Código, comentarios, men
 
 ```bash
 pnpm install          # usar siempre pnpm (no npm ni yarn)
+pnpm db:up            # Postgres local en Docker (docker-compose.yml)
+pnpm db:down          # detiene Postgres (los datos persisten en el volumen)
 pnpm dev              # servidor de desarrollo
 pnpm lint             # ESLint (next/core-web-vitals + typescript)
 pnpm typecheck        # next typegen && tsc --noEmit
-pnpm test             # Vitest (archivos *.test.ts junto al código)
+pnpm test             # Vitest (archivos *.test.ts en `tests/`, misma ruta que el código)
 pnpm build            # build de producción
 pnpm db:generate      # generar migración desde lib/db/schema.ts
 pnpm db:migrate       # aplicar migraciones
@@ -20,6 +22,33 @@ pnpm db:seed          # especialidades dentales
 ```
 
 Variables de entorno: copia `.env.example` a `.env.local`.
+
+## Levantar el proyecto en desarrollo
+
+Requiere Docker y pnpm. Primera vez:
+
+```bash
+pnpm install
+cp .env.example .env.local   # luego ajusta los valores de abajo
+pnpm db:up                   # Postgres 16 en localhost:5432 (usuario, clave y base: citas)
+pnpm db:migrate
+pnpm db:seed
+pnpm dev                     # http://localhost:3000
+```
+
+Valores de `.env.local` para el Postgres de Docker (sin TLS):
+
+```
+DATABASE_URL=postgres://citas:citas@localhost:5432/citas?sslmode=disable
+DATABASE_SSL=disable
+BETTER_AUTH_SECRET=<openssl rand -base64 32>
+BETTER_AUTH_URL=http://localhost:3000
+```
+
+- Resend, QStash y Google son opcionales para desarrollo: sin ellos la API responde, pero no salen correos ni se programan recordatorios.
+- Los agentes arrancan el servidor en segundo plano (`pnpm dev > "$LOG" 2>&1 &`) y lo prueban con `curl`. Para detenerlo usa `pkill -f next-server`; `pkill -f "next dev"` también mata la shell que lo ejecuta.
+- Reiniciar de cero la base: `docker compose down -v && pnpm db:up && pnpm db:migrate && pnpm db:seed`.
+- Los usuarios y datos de prueba viven solo en el volumen local; no son datos reales.
 
 ## Antes de dar un cambio por terminado
 

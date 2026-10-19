@@ -1,37 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db/client"
-import { cita } from "@/lib/db/schema"
-import { eq } from "drizzle-orm"
 import { getSession } from "@/lib/auth/session"
 import { crearCitaSchema } from "@/lib/citas/schemas"
-import { crearCita, type ErrorCrearCita } from "@/lib/citas/servicio"
+import { crearCita, listarCitasDePaciente, type ErrorCrearCita } from "@/lib/citas/servicio"
 import { errorJson, leerCuerpo } from "@/lib/http"
 import { citaParaPaciente } from "@/lib/citas/dto"
 import { notificarCitaCreada } from "@/lib/citas/notificaciones"
 
-// GET /api/appointments — lista de citas del usuario
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
         const session = await getSession()
-        if (!session) {
-            return NextResponse.json(
-                { message: "No autenticado" },
-                { status: 401 }
-            )
-        }
+        if (!session) return errorJson(401, "No autenticado")
 
-        const citas = await db
-            .select()
-            .from(cita)
-            .where(eq(cita.pacienteId, session.user.id))
-
+        const citas = await listarCitasDePaciente(session.user.id)
         return NextResponse.json({ citas: citas.map(citaParaPaciente) })
     } catch (error) {
         console.error(error)
-        return NextResponse.json(
-            { message: "Error al obtener citas" },
-            { status: 500 }
-        )
+        return errorJson(500, "Error al obtener citas")
     }
 }
 
@@ -48,7 +32,6 @@ const RESPUESTAS_ERROR = {
     HORARIO_OCUPADO: [409, "El horario seleccionado ya está ocupado"],
 } as const satisfies Record<ErrorCrearCita, readonly [number, string]>
 
-// POST /api/appointments — crear cita
 export async function POST(request: NextRequest) {
     const cuerpo = await leerCuerpo(request, crearCitaSchema)
     if (!cuerpo.ok) return cuerpo.response

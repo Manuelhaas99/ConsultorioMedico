@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db/client"
-import { bloqueoHorario, doctor } from "@/lib/db/schema"
-import { eq, and } from "drizzle-orm"
 import { getSession } from "@/lib/auth/session"
-import { doctorIdSchema } from "@/lib/doctores/schemas"
-import { obtenerBloqueos } from "@/lib/doctores/servicio"
-import { errorJson } from "@/lib/http"
+import { crearBloqueoSchema, doctorIdSchema } from "@/lib/doctores/schemas"
+import { crearBloqueo, obtenerBloqueos, type ErrorGestionarAgenda } from "@/lib/doctores/servicio"
+import { errorJson, leerCuerpo } from "@/lib/http"
+
+const RESPUESTAS_ERROR_CREAR = {
+    NO_ENCONTRADO: [404, "Doctor no encontrado"],
+    NO_AUTORIZADO: [403, "No tienes permiso para gestionar la agenda de este doctor"],
+} as const satisfies Record<ErrorGestionarAgenda, readonly [number, string]>
 
 export async function GET(_request: NextRequest, ctx: RouteContext<"/api/doctors/[id]/blocks">) {
     try {
@@ -24,77 +26,26 @@ export async function GET(_request: NextRequest, ctx: RouteContext<"/api/doctors
     }
 }
 
-// POST /api/doctors/[id]/blocks — crear bloqueo
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, ctx: RouteContext<"/api/doctors/[id]/blocks">) {
+    const id = doctorIdSchema.safeParse((await ctx.params).id)
+    if (!id.success) {
+        return errorJson(400, "Datos inválidos", { id: id.error.issues.map((i) => i.message) })
+    }
+    const cuerpo = await leerCuerpo(request, crearBloqueoSchema)
+    if (!cuerpo.ok) return cuerpo.response
+
     try {
         const session = await getSession()
-        if (!session) {
-            return NextResponse.json(
-                { message: "No autenticado" },
-                { status: 401 }
-            )
+        if (!session) return errorJson(401, "No autenticado")
+
+        const resultado = await crearBloqueo(id.data, cuerpo.data, { usuarioId: session.user.id })
+        if (!resultado.ok) {
+            const [status, message] = RESPUESTAS_ERROR_CREAR[resultado.error]
+            return errorJson(status, message)
         }
-
-        const { id } = await params
-
-        // Verificar que el doctor pertenece al usuario
-        const [doctorData] = await db
-            .select()
-            .from(doctor)
-            .where(
-                and(
-                    eq(doctor.id, id),
-                    eq(doctor.usuarioId, session.user.id)
-                )
-            )
-            .limit(1)
-
-        if (!doctorData) {
-            return NextResponse.json(
-                { message: "No autorizado" },
-                { status: 403 }
-            )
-        }
-
-        const body = await request.json()
-        const { fechaInicio, fechaFin, motivo } = body
-
-        if (!fechaInicio || !fechaFin) {
-            return NextResponse.json(
-                { message: "Fecha inicio y fecha fin son requeridos" },
-                { status: 400 }
-            )
-        }
-
-        if (new Date(fechaInicio) >= new Date(fechaFin)) {
-            return NextResponse.json(
-                { message: "La fecha de inicio debe ser anterior a la fecha de fin" },
-                { status: 400 }
-            )
-        }
-
-        const [nuevoBloqueo] = await db
-            .insert(bloqueoHorario)
-            .values({
-                doctorId: id,
-                fechaInicio: new Date(fechaInicio),
-                fechaFin: new Date(fechaFin),
-                motivo: motivo ?? null,
-            })
-            .returning()
-
-        return NextResponse.json(
-            { bloqueo: nuevoBloqueo },
-            { status: 201 }
-        )
+        return NextResponse.json({ bloqueo: resultado.bloqueo }, { status: 201 })
     } catch (error) {
         console.error(error)
-        return NextResponse.json(
-            { message: "Error al crear bloqueo" },
-            { status: 500 }
-        )
+        return errorJson(500, "Error al crear bloqueo")
     }
 }

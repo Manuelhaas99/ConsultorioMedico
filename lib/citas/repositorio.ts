@@ -1,5 +1,5 @@
 import "server-only"
-import { and, eq, gt, lt, notInArray, or, sql } from "drizzle-orm"
+import { and, desc, eq, gt, lt, notInArray, or, sql } from "drizzle-orm"
 import { db } from "@/lib/db/client"
 import { bloqueoHorario, cita, disponibilidadDoctor, doctor, especialidad, secretario, tipoConsulta, ubicacion, usuario } from "@/lib/db/schema"
 import { ESTADOS_QUE_LIBERAN_HORARIO, type EstadoCita, type Intervalo } from "./intervalos"
@@ -92,6 +92,10 @@ export async function insertarCita(valores: NuevaCita): Promise<CitaRegistrada> 
 export async function citaPorId(id: string): Promise<CitaRegistrada | undefined> {
     const [fila] = await db.select().from(cita).where(eq(cita.id, id)).limit(1)
     return fila
+}
+
+export async function citasDePaciente(pacienteId: string): Promise<CitaRegistrada[]> {
+    return db.select().from(cita).where(eq(cita.pacienteId, pacienteId)).orderBy(desc(cita.fechaInicio))
 }
 
 export async function citaPorTokenHash(hash: string): Promise<CitaRegistrada | undefined> {

@@ -71,6 +71,7 @@ export async function enviarConfirmacionCita({
             fechaFin,
             direccion,
             tokenGestion,
+            baseUrl: env("app").BETTER_AUTH_URL,
         }),
     })
 }
@@ -114,6 +115,7 @@ export async function enviarRecordatorioCita({
             invitado,
             tiempoRestante,
             citaId,
+            baseUrl: env("app").BETTER_AUTH_URL,
         }),
         idempotencyKey,
     })
@@ -139,11 +141,12 @@ export async function enviarCodigo({
 }
 
 export async function enviarEnlaceAcceso({ email, url, minutosVigencia }: { email: string; url: string; minutosVigencia: number }) {
-    if (!enlaceDeLaApp(url)) throw new EnvioCorreoError("El enlace de acceso no es del origen de la app")
+    const baseUrl = env("app").BETTER_AUTH_URL
+    if (!enlaceDeLaApp(url, baseUrl)) throw new EnvioCorreoError("El enlace de acceso no es del origen de la app")
     return enviar({
         to: email,
         subject: asuntoEnlaceAcceso(),
-        html: templateEnlaceAcceso({ url, minutosVigencia }),
-        text: textoEnlaceAcceso({ url, minutosVigencia }),
+        html: templateEnlaceAcceso({ url, minutosVigencia, baseUrl }),
+        text: textoEnlaceAcceso({ url, minutosVigencia, baseUrl }),
     })
 }
